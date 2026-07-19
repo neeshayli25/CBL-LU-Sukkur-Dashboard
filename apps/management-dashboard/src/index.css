@@ -1,0 +1,87 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #FAF6EF; /* lu-bg */
+    --foreground: #2B1B17; /* lu-text */
+    
+    --card: #FFFFFF;
+    --card-foreground: #2B1B17;
+    
+    --popover: #FFFFFF;
+    --popover-foreground: #2B1B17;
+    
+    --primary: #8C1D2B; /* lu-primary */
+    --primary-foreground: #FFFFFF;
+    
+    --secondary: #D9A441; /* lu-secondary */
+    --secondary-foreground: #FFFFFF;
+    
+    --muted: #F4EFE6;
+    --muted-foreground: #6E5A4E; /* lu-text-muted */
+    
+    --accent: #C46A2F; /* lu-tertiary */
+    --accent-foreground: #FFFFFF;
+    
+    --destructive: #8C1D2B; /* lu-danger */
+    --destructive-foreground: #FFFFFF;
+    
+    --border: #E5DFD3;
+    --input: #E5DFD3;
+    --ring: #D9A441;
+    
+    --radius: 0.5rem;
+  }
+  
+  .dark {
+    --background: #1E1A18; /* Warm Charcoal */
+    --foreground: #FAF6EF; /* Cream Text */
+    
+    --card: #2A2220; /* Dark Brown/Grey */
+    --card-foreground: #FAF6EF;
+    
+    --popover: #2A2220;
+    --popover-foreground: #FAF6EF;
+    
+    --primary: #A7283B; /* Slightly brighter maroon for contrast */
+    --primary-foreground: #FFFFFF;
+    
+    --secondary: #E5B455; /* Brighter amber for contrast */
+    --secondary-foreground: #1E1A18;
+    
+    --muted: #3B302E;
+    --muted-foreground: #A89891;
+    
+    --accent: #D2793D; 
+    --accent-foreground: #FFFFFF;
+    
+    --destructive: #A7283B;
+    --destructive-foreground: #FFFFFF;
+    
+    --border: #3B302E;
+    --input: #3B302E;
+    --ring: #E5B455;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-family: 'Inter', 'Poppins', sans-serif;
+  }
+}
+
+/* Custom Utilities for LU Theme */
+@layer utilities {
+  .glass {
+    @apply bg-white/70 backdrop-blur-md border border-white/20;
+  }
+  .card-shadow {
+    box-shadow: 0 4px 6px -1px rgba(140, 29, 43, 0.05), 0 2px 4px -1px rgba(140, 29, 43, 0.03);
+  }
+}
