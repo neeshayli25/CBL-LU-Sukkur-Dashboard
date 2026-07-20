@@ -6,8 +6,8 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  roles: string[];
-  department?: string;
+  role: string;
+  department_id?: string;
 }
 
 interface AuthState {
@@ -47,8 +47,8 @@ export const useAuthStore = create<AuthState>()(
 
       hasRole: (role: string) => {
         const user = get().user;
-        if (!user || !user.roles) return false;
-        return user.roles.some((r) => r.toLowerCase() === role.toLowerCase());
+        if (!user || !user.role) return false;
+        return user.role.toLowerCase() === role.toLowerCase();
       },
     }),
     {

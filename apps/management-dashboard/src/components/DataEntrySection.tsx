@@ -1,56 +1,74 @@
 import React, { useState, useEffect } from 'react';
 import { Layout } from './Layout';
 import type { SectionConfig, ColumnSchema } from '../config/sectionSchemas';
-import { Plus, Save, Trash2, Download, Edit2, X } from 'lucide-react';
+import { Plus, Save, Trash2, Download, Edit2, X, RefreshCw } from 'lucide-react';
 import { iconMap } from './iconMap';
+import { usePermissions } from '@cbl/auth';
+import { useModuleData } from '../hooks/useModuleData';
 
 interface DataEntrySectionProps {
   schema: SectionConfig;
 }
 
 export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) => {
-  // Local storage persistence
-  const [entries, setEntries] = useState<any[]>(() => {
-    const saved = localStorage.getItem(`cbl_data_${schema.id}`);
-    if (saved) return JSON.parse(saved);
-    // Mock prepopulated row based on first few columns
-    return [{
-      id: Date.now().toString(),
-      [schema.columns[0]?.key]: 'Mock Entry 1',
-      [schema.columns[1]?.key]: '2026-07-18',
-    }];
-  });
+  const { data: entries, loading, fetchAll, createRecord, updateRecord, deleteRecord } = useModuleData(schema.id);
 
   const [formData, setFormData] = useState<any>({});
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<any>({});
 
+  const { 
+    canAddData, 
+    canEditData, 
+    canDeleteData, 
+    canExportCSV,
+    canApproveRecords 
+  } = usePermissions();
+
   useEffect(() => {
-    localStorage.setItem(`cbl_data_${schema.id}`, JSON.stringify(entries));
-  }, [entries, schema.id]);
+    fetchAll();
+  }, [schema.id, fetchAll]);
+
+  const applyComputes = (data: any, currentSchema: SectionConfig) => {
+    const nextData = { ...data };
+    currentSchema.columns.forEach(col => {
+      if (col.compute) {
+        nextData[col.key] = col.compute(nextData);
+      }
+    });
+    return nextData;
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>, isEdit = false) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target as any;
+    let finalValue: any = value;
+    if (type === 'number') {
+      finalValue = value === '' ? '' : Number(value);
+    }
+
     if (isEdit) {
-      setEditFormData((prev: any) => ({ ...prev, [name]: value }));
+      const newEditData = { ...editFormData, [name]: finalValue };
+      setEditFormData(applyComputes(newEditData, schema));
     } else {
-      setFormData((prev: any) => ({ ...prev, [name]: value }));
+      const newData = { ...formData, [name]: finalValue };
+      setFormData(applyComputes(newData, schema));
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newEntry = {
-      ...formData,
-      id: Date.now().toString(),
-    };
-    setEntries([newEntry, ...entries]);
-    setFormData({}); // Reset
+    const dataToSave = applyComputes(formData, schema);
+    const result = await createRecord(dataToSave);
+    if (result.success) {
+      setFormData({});
+    } else {
+      alert(`Error adding record: ${result.message}`);
+    }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this entry?")) {
-      setEntries(entries.filter(entry => entry.id !== id));
+      await deleteRecord(id);
     }
   };
 
@@ -59,13 +77,20 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
     setEditFormData({ ...entry });
   };
 
-  const saveEdit = () => {
-    setEntries(entries.map(e => e.id === editingId ? editFormData : e));
-    setEditingId(null);
+  const saveEdit = async () => {
+    if (editingId) {
+      const result = await updateRecord(editingId, applyComputes(editFormData, schema));
+      if (result.success) {
+        setEditingId(null);
+      } else {
+        alert(`Error updating record: ${result.message}`);
+      }
+    }
   };
 
   const cancelEdit = () => {
     setEditingId(null);
+    setEditFormData({});
   };
 
   const exportCSV = () => {
@@ -101,8 +126,10 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
   };
 
   const renderField = (col: ColumnSchema, value: any, onChange: (e: any, isEdit: boolean) => void, isEdit = false) => {
-    const commonClasses = "w-full px-3 py-2 border border-border rounded-md text-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary";
+    const commonClasses = `w-full px-3 py-2 border border-border rounded-md text-sm ${col.readonly ? 'bg-muted/50 text-muted-foreground' : 'bg-background text-foreground'} focus:outline-none focus:ring-1 focus:ring-primary`;
     
+    // If it's the status field and user cannot approve, they can't change it to Closed
+    // We handle this by disabling the "Closed" option if !canApproveRecords()
     if (col.type === 'select') {
       return (
         <select 
@@ -111,9 +138,13 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
           onChange={(e) => onChange(e, isEdit)} 
           className={commonClasses}
           required={col.required}
+          disabled={col.readonly}
         >
           <option value="">Select...</option>
-          {col.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+          {col.options?.map(opt => {
+             const isDisabled = (col.key === 'status_id' && opt === 'Closed' && !canApproveRecords());
+             return <option key={opt} value={opt} disabled={isDisabled}>{opt}</option>;
+          })}
         </select>
       );
     }
@@ -127,6 +158,7 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
           className={commonClasses}
           rows={3}
           required={col.required}
+          readOnly={col.readonly}
         />
       );
     }
@@ -139,6 +171,7 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
         onChange={(e) => onChange(e, isEdit)} 
         className={commonClasses}
         required={col.required}
+        readOnly={col.readonly}
       />
     );
   };
@@ -158,42 +191,52 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
             <h1 className="text-2xl font-bold" style={{ color: schema.accentColor }}>{schema.title}</h1>
           </div>
           
-          <button 
-            onClick={exportCSV}
-            className="flex items-center gap-2 px-4 py-2 rounded-md font-medium text-white transition-colors shadow-sm hover:opacity-90"
-            style={{ backgroundColor: schema.accentColor }}
-          >
-            <Download className="h-4 w-4" />
-            Export to CSV
-          </button>
+          {canExportCSV() && (
+            <button 
+              onClick={exportCSV}
+              className="flex items-center gap-2 px-4 py-2 rounded-md font-medium text-white transition-colors shadow-sm hover:opacity-90"
+              style={{ backgroundColor: schema.accentColor }}
+            >
+              <Download className="h-4 w-4" />
+              Export to CSV
+            </button>
+          )}
         </div>
 
+        {loading && (
+          <div className="flex justify-center p-4">
+            <RefreshCw className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        )}
+
         {/* Data Entry Form */}
-        <div className="bg-card rounded-xl border border-border card-shadow p-5" style={{ borderLeft: `4px solid ${schema.accentColor}` }}>
-          <h2 className="text-lg font-semibold mb-4 text-foreground">Add New Record</h2>
-          <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {schema.columns.map(col => (
-                <div key={col.key}>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">
-                    {col.label} {col.required && <span className="text-danger">*</span>}
-                  </label>
-                  {renderField(col, formData[col.key], handleInputChange, false)}
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 flex justify-end">
-              <button 
-                type="submit" 
-                className="flex items-center gap-2 px-4 py-2 rounded-md font-medium text-white transition-colors shadow-sm hover:opacity-90"
-                style={{ backgroundColor: schema.accentColor }}
-              >
-                <Plus className="h-4 w-4" />
-                Add Entry
-              </button>
-            </div>
-          </form>
-        </div>
+        {canAddData() && (
+          <div className="bg-card rounded-xl border border-border card-shadow p-5" style={{ borderLeft: `4px solid ${schema.accentColor}` }}>
+            <h2 className="text-lg font-semibold mb-4 text-foreground">Add New Record</h2>
+            <form onSubmit={handleSubmit}>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {schema.columns.map(col => (
+                  <div key={col.key}>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1">
+                      {col.label} {col.required && <span className="text-danger">*</span>}
+                    </label>
+                    {renderField(col, formData[col.key], handleInputChange, false)}
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex justify-end">
+                <button 
+                  type="submit" 
+                  className="flex items-center gap-2 px-4 py-2 rounded-md font-medium text-white transition-colors shadow-sm hover:opacity-90"
+                  style={{ backgroundColor: schema.accentColor }}
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Entry
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
 
         {/* Table View */}
         <div className="bg-card rounded-xl border border-border card-shadow overflow-hidden">
@@ -204,7 +247,9 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
                   {schema.columns.map(col => (
                     <th key={col.key} className="px-4 py-4 font-semibold">{col.label}</th>
                   ))}
-                  <th className="px-4 py-4 font-semibold text-right">Actions</th>
+                  {(canEditData() || canDeleteData()) && (
+                    <th className="px-4 py-4 font-semibold text-right">Actions</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -226,27 +271,33 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
                           )}
                         </td>
                       ))}
-                      <td className="px-4 py-3 text-right whitespace-nowrap">
-                        {editingId === entry.id ? (
-                          <div className="flex items-center justify-end gap-2">
-                            <button onClick={saveEdit} className="p-1.5 text-success hover:bg-success/10 rounded" title="Save">
-                              <Save className="h-4 w-4" />
-                            </button>
-                            <button onClick={cancelEdit} className="p-1.5 text-muted-foreground hover:bg-muted rounded" title="Cancel">
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-end gap-2">
-                            <button onClick={() => startEdit(entry)} className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded transition-colors" title="Edit">
-                              <Edit2 className="h-4 w-4" />
-                            </button>
-                            <button onClick={() => handleDelete(entry.id)} className="p-1.5 text-muted-foreground hover:text-danger hover:bg-danger/10 rounded transition-colors" title="Delete">
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        )}
-                      </td>
+                      {(canEditData() || canDeleteData()) && (
+                        <td className="px-4 py-3 text-right whitespace-nowrap">
+                          {editingId === entry.id ? (
+                            <div className="flex items-center justify-end gap-2">
+                              <button onClick={saveEdit} className="p-1.5 text-success hover:bg-success/10 rounded" title="Save">
+                                <Save className="h-4 w-4" />
+                              </button>
+                              <button onClick={cancelEdit} className="p-1.5 text-muted-foreground hover:bg-muted rounded" title="Cancel">
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-end gap-2">
+                              {canEditData() && (
+                                <button onClick={() => startEdit(entry)} className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded transition-colors" title="Edit">
+                                  <Edit2 className="h-4 w-4" />
+                                </button>
+                              )}
+                              {canDeleteData() && (
+                                <button onClick={() => handleDelete(entry.id)} className="p-1.5 text-muted-foreground hover:text-danger hover:bg-danger/10 rounded transition-colors" title="Delete">
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   ))
                 )}

@@ -21,8 +21,9 @@ export const useAuth = () => {
         const fakeUser = {
           id: "999",
           email: "admin@lu-sukkur.com",
-          name: "Plant Manager (Bypass)",
-          roles: ["Admin"], 
+          name: "System Administrator (Bypass)",
+          role: "System Administrator", 
+          department_id: "HSE"
         };
         loginUser(fakeUser, "fake-dev-token");
         return;
@@ -65,7 +66,8 @@ export const useAuth = () => {
         id: result.data.id.toString(),
         email: result.data.email,
         name: result.data.name,
-        roles: [result.data.role === 'admin' ? 'Admin' : 'User'],
+        role: result.data.role,
+        department_id: result.data.department_id?.toString()
       };
 
       loginUser(authUser, loginResponse.idToken || "msal-token");

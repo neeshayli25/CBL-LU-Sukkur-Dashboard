@@ -1,15 +1,62 @@
 export const DEPARTMENTS = [
-  'Operations',
-  'Maintenance',
-  'HR',
-  'Finance',
-  'Sales',
+  'PROD',
+  'QA',
+  'PROJ',
+  'STR',
+  'ADMIN',
   'IT',
+  'ENG',
   'HSE',
-  'PRODUCTION',
-  'Department 4',
-  'Department 5',
-  'Department 6'
+  'QC',
+  'NPD',
+  'ESD'
+];
+
+export const INCIDENT_CATEGORIES = [
+  'First Aid',
+  'MTC',
+  'LTI',
+  'RWC',
+  'Fatality',
+  'Minor Fire',
+  'Significant Near Miss'
+];
+
+export const HAZARD_CATEGORIES = [
+  'Electrical',
+  'Fire',
+  'Slip/Trip/Fall',
+  'Improper Housekeeping',
+  'Unauthorized Access',
+  'Chemical',
+  'Mechanical',
+  'Behavioral',
+  'Environmental'
+];
+
+export const ROOT_CAUSES = [
+  'Human Error',
+  'Unsafe Act',
+  'Unsafe Condition',
+  'Poor Housekeeping',
+  'Improper PPE',
+  'Equipment Failure',
+  'No SOP/Procedure',
+  'Training Gap'
+];
+
+export const RISK_RATINGS = [
+  'Low',
+  'Medium',
+  'High',
+  'Critical'
+];
+
+export const STATUSES = [
+  'Pending',
+  'WIP',
+  'Closed',
+  'Cancelled'
 ];
 
 export const CHART_COLORS = {

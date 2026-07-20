@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { useAuth } from '@cbl/auth';
+import { useAuth, usePermissions } from '@cbl/auth';
 import { useFilters } from '../context/FilterContext';
 import {
   LayoutDashboard,
@@ -55,11 +55,19 @@ const sidebarItems = [
 export const Layout = ({ children }: { children: React.ReactNode }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { logout, user, hasRole } = useAuth();
+  const { logout, user } = useAuth();
+  const { canViewReports, isDepartmentRestricted } = usePermissions();
   const navigate = useNavigate();
   const { filters, setFilter } = useFilters();
   
-  const isAdmin = hasRole('Admin');
+  const isRestrictedDept = isDepartmentRestricted();
+
+  // Effect to force department filter if restricted
+  React.useEffect(() => {
+    if (isRestrictedDept && user?.department_id) {
+      setFilter('department', user.department_id);
+    }
+  }, [isRestrictedDept, user?.department_id, setFilter]);
 
   const handleLogout = () => {
     logout();
@@ -102,8 +110,8 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
               <select 
                 value={filters.department} 
                 onChange={(e) => setFilter('department', e.target.value)}
-                disabled={!isAdmin}
-                className={`text-sm bg-transparent border-none focus:ring-0 text-foreground border-l border-border pl-2 ${!isAdmin ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
+                disabled={isRestrictedDept}
+                className={`text-sm bg-transparent border-none focus:ring-0 text-foreground border-l border-border pl-2 ${isRestrictedDept ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
               >
                 <option value="All">All Depts</option>
                 {DEPARTMENTS.map(dept => (
@@ -124,8 +132,8 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
 
             <div className="flex items-center gap-2 border-l border-border pl-4">
               <div className="hidden sm:flex flex-col items-end">
-                <span className="text-sm font-medium leading-none">{user?.name || 'Plant Manager'}</span>
-                <span className="text-xs text-muted-foreground mt-1">{isAdmin ? 'Admin' : 'User'}</span>
+                <span className="text-sm font-medium leading-none">{user?.name || 'User'}</span>
+                <span className="text-xs text-muted-foreground mt-1">{user?.role || 'Guest'}</span>
               </div>
               <div className="h-8 w-8 rounded-full bg-secondary text-white flex items-center justify-center font-bold">
                 <User className="h-4 w-4" />
@@ -152,24 +160,28 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
         >
           <div className="flex-1 overflow-y-auto py-4">
             <nav className="space-y-1 px-2">
-              {sidebarItems.map((item) => (
-                <NavLink
-                  key={item.href}
-                  to={item.href}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                      isActive
-                        ? 'bg-primary/10 text-primary'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                    }`
-                  }
-                  style={({ isActive }) => isActive && (item as any).color ? { color: (item as any).color, backgroundColor: `${(item as any).color}15` } : {}}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <span className={collapsed ? 'mx-auto' : ''} style={{ color: (item as any).color }}>{item.icon}</span>
-                  {!collapsed && <span>{item.title}</span>}
-                </NavLink>
-              ))}
+              {sidebarItems.map((item) => {
+                if (item.href === '/reports' && !canViewReports()) return null;
+                
+                return (
+                  <NavLink
+                    key={item.href}
+                    to={item.href}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                        isActive
+                          ? 'bg-primary/10 text-primary'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      }`
+                    }
+                    style={({ isActive }) => isActive && (item as any).color ? { color: (item as any).color, backgroundColor: `${(item as any).color}15` } : {}}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <span className={collapsed ? 'mx-auto' : ''} style={{ color: (item as any).color }}>{item.icon}</span>
+                    {!collapsed && <span>{item.title}</span>}
+                  </NavLink>
+                );
+              })}
             </nav>
           </div>
           <div className="hidden md:flex p-4 border-t border-border">
@@ -207,8 +219,8 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
               <select 
                 value={filters.department} 
                 onChange={(e) => setFilter('department', e.target.value)}
-                disabled={!isAdmin}
-                className={`text-sm bg-muted text-foreground rounded px-2 py-1 flex-1 ${!isAdmin ? 'opacity-70' : ''}`}
+                disabled={isRestrictedDept}
+                className={`text-sm bg-muted text-foreground rounded px-2 py-1 flex-1 ${isRestrictedDept ? 'opacity-70' : ''}`}
               >
                 <option value="All">All Depts</option>
                 {DEPARTMENTS.map(dept => (
