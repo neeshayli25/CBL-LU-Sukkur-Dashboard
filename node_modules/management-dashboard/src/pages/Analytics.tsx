@@ -27,6 +27,12 @@ export const Analytics = () => {
         if (filters.year && filters.year !== 'All') {
           data = data.filter((d: any) => d.date?.startsWith(filters.year));
         }
+        if (filters.fromDate) {
+          data = data.filter((d: any) => d.date && d.date >= filters.fromDate);
+        }
+        if (filters.toDate) {
+          data = data.filter((d: any) => d.date && d.date <= filters.toDate);
+        }
         
         setHazards(data);
       } catch (err) {

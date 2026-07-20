@@ -6,6 +6,8 @@ export interface Filters {
   auditType: string;
   department: string;
   status: string;
+  fromDate: string;
+  toDate: string;
 }
 
 interface FilterContextType {
@@ -33,6 +35,8 @@ export const FilterProvider = ({ children }: { children: ReactNode }) => {
     auditType: 'All',
     department: initialDept,
     status: 'All',
+    fromDate: '',
+    toDate: '',
   });
 
   const setFilter = (key: keyof Filters, value: string) => {

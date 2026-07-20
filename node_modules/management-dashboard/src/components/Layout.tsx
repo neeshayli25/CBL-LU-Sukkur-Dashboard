@@ -96,13 +96,30 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
           </div>
           
           <div className="ml-auto flex items-center space-x-2 sm:space-x-4">
-            {/* Global Filters */}
+            <div className="hidden lg:flex items-center space-x-2 bg-muted/50 p-1 rounded-md text-sm">
+              <span className="text-muted-foreground px-2">From:</span>
+              <input 
+                type="date" 
+                value={filters.fromDate} 
+                onChange={(e) => setFilter('fromDate', e.target.value)}
+                className="bg-transparent border-none focus:ring-0 text-foreground cursor-pointer p-0"
+              />
+              <span className="text-muted-foreground px-2 border-l border-border pl-2">To:</span>
+              <input 
+                type="date" 
+                value={filters.toDate} 
+                onChange={(e) => setFilter('toDate', e.target.value)}
+                className="bg-transparent border-none focus:ring-0 text-foreground cursor-pointer p-0"
+              />
+            </div>
+            
             <div className="hidden md:flex items-center space-x-2 bg-muted/50 p-1 rounded-md">
               <select 
                 value={filters.year} 
                 onChange={(e) => setFilter('year', e.target.value)}
                 className="text-sm bg-transparent border-none focus:ring-0 text-foreground cursor-pointer"
               >
+                <option value="All">All Time</option>
                 <option value="2024">2024</option>
                 <option value="2025">2025</option>
                 <option value="2026">2026</option>
@@ -207,11 +224,26 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
           <div className="mx-auto max-w-7xl">
             {/* Mobile Filters (visible only on small screens) */}
             <div className="md:hidden flex flex-wrap gap-2 mb-4 bg-card p-3 rounded-md border border-border shadow-sm">
-               <select 
+              <input 
+                type="date" 
+                value={filters.fromDate} 
+                onChange={(e) => setFilter('fromDate', e.target.value)}
+                className="text-sm bg-muted text-foreground rounded px-2 py-1 flex-1"
+                placeholder="From"
+              />
+              <input 
+                type="date" 
+                value={filters.toDate} 
+                onChange={(e) => setFilter('toDate', e.target.value)}
+                className="text-sm bg-muted text-foreground rounded px-2 py-1 flex-1"
+                placeholder="To"
+              />
+              <select 
                 value={filters.year} 
                 onChange={(e) => setFilter('year', e.target.value)}
                 className="text-sm bg-muted text-foreground rounded px-2 py-1 flex-1"
               >
+                <option value="All">All Time</option>
                 <option value="2024">2024</option>
                 <option value="2025">2025</option>
                 <option value="2026">2026</option>

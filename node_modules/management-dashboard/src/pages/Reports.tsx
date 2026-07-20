@@ -1,10 +1,6 @@
-import React, { useState } from 'react';
-import { Layout } from '../components/Layout';
-import { FileText, Download, Filter } from 'lucide-react';
 import { usePermissions } from '@cbl/auth';
 import { DEPARTMENTS, STATUSES, RISK_RATINGS, INCIDENT_CATEGORIES } from '../config/constants';
-import { ALL_SECTIONS } from '../config/sectionSchemas';
-import { moduleService } from '../services/api/moduleService';
+import { exportCSV } from '../utils/exportUtils';
 
 const REPORT_TYPES = [
   "Incident Report",

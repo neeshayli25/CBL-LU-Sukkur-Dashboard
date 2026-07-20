@@ -1,17 +1,9 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute, useAuth } from '@cbl/auth';
 import { Dashboard } from './pages/Dashboard';
-import { Observations } from './pages/Observations';
-import { StatusTracker } from './pages/StatusTracker';
+
 import { Analytics } from './pages/Analytics';
 import { Settings } from './pages/Settings';
-import { AuditPlan } from './pages/AuditPlan';
-import { Categories } from './pages/Categories';
-import { Departments } from './pages/Departments';
-import { Priority } from './pages/Priority';
-import { RootCause } from './pages/RootCause';
-import { Actions } from './pages/Actions';
-import { DueDates } from './pages/DueDates';
 import { Reports } from './pages/Reports';
 import { DataEntrySection } from './components/DataEntrySection';
 import { ALL_SECTIONS } from './config/sectionSchemas';
@@ -80,17 +72,8 @@ function App() {
           />
 
           {/* New Sidebar Routes */}
-          <Route path="/observations" element={<ProtectedRoute fallback={<Navigate to="/login" />}><Observations /></ProtectedRoute>} />
-          <Route path="/status-tracker" element={<ProtectedRoute fallback={<Navigate to="/login" />}><StatusTracker /></ProtectedRoute>} />
           <Route path="/analytics" element={<ProtectedRoute fallback={<Navigate to="/login" />}><Analytics /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute fallback={<Navigate to="/login" />}><Settings /></ProtectedRoute>} />
-          <Route path="/audit-plan" element={<ProtectedRoute fallback={<Navigate to="/login" />}><AuditPlan /></ProtectedRoute>} />
-          <Route path="/categories" element={<ProtectedRoute fallback={<Navigate to="/login" />}><Categories /></ProtectedRoute>} />
-          <Route path="/departments" element={<ProtectedRoute fallback={<Navigate to="/login" />}><Departments /></ProtectedRoute>} />
-          <Route path="/priority" element={<ProtectedRoute fallback={<Navigate to="/login" />}><Priority /></ProtectedRoute>} />
-          <Route path="/root-cause" element={<ProtectedRoute fallback={<Navigate to="/login" />}><RootCause /></ProtectedRoute>} />
-          <Route path="/actions" element={<ProtectedRoute fallback={<Navigate to="/login" />}><Actions /></ProtectedRoute>} />
-          <Route path="/due-dates" element={<ProtectedRoute fallback={<Navigate to="/login" />}><DueDates /></ProtectedRoute>} />
           <Route path="/reports" element={<ProtectedRoute fallback={<Navigate to="/login" />}><Reports /></ProtectedRoute>} />
 
           {/* Dynamic Data Entry Sections */}

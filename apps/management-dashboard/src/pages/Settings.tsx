@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { Layout } from '../components/Layout';
 import { useAuth } from '@cbl/auth';
 import { useTheme } from '../context/ThemeContext';
-import { Settings as SettingsIcon, User, Bell, Moon, Sun, MonitorSmartphone, ShieldAlert } from 'lucide-react';
-import { useAuthStore } from '@cbl/auth';
+import { Settings as SettingsIcon, User, Bell, Moon, Sun, MonitorSmartphone, ShieldAlert, Database } from 'lucide-react';
+import { useAuthStore, usePermissions } from '@cbl/auth';
 import { DEPARTMENTS } from '../config/constants';
 
 export const Settings = () => {
   const { user } = useAuth();
+  const { hasRole } = useAuthStore();
   const { theme, toggleTheme } = useTheme();
   
   // Mock settings state
@@ -99,6 +100,27 @@ export const Settings = () => {
             </div>
           </div>
         </section>
+
+        {/* Master Data Management (System Admin Only) */}
+        {hasRole("System Administrator") && (
+          <section className="bg-card border border-border rounded-lg p-6 card-shadow">
+            <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+              <Database className="h-5 w-5 text-muted-foreground" /> Master Data Management
+            </h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Manage system-wide lookup lists. Changes here will reflect across all modules.
+            </p>
+            <div className="space-y-4 border border-border rounded-md p-4">
+              <h3 className="font-medium text-foreground">Departments</h3>
+              <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
+                {DEPARTMENTS.map(d => <li key={d}>{d}</li>)}
+              </ul>
+              <button className="mt-2 bg-muted hover:bg-muted/80 text-foreground px-3 py-1.5 rounded-md text-xs font-medium transition-colors">
+                + Add Department
+              </button>
+            </div>
+          </section>
+        )}
 
         {/* Display & Theme */}
         <section className="bg-card border border-border rounded-lg p-6 card-shadow">

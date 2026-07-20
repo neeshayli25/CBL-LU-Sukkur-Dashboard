@@ -59,6 +59,18 @@ export const Dashboard = () => {
           if (filters.year && filters.year !== 'All') {
             filtered = filtered.filter(d => d.date?.startsWith(filters.year) || d.target_date?.startsWith(filters.year));
           }
+          if (filters.fromDate) {
+            filtered = filtered.filter(d => {
+              const recordDate = d.date || d.target_date;
+              return recordDate && recordDate >= filters.fromDate;
+            });
+          }
+          if (filters.toDate) {
+            filtered = filtered.filter(d => {
+              const recordDate = d.date || d.target_date;
+              return recordDate && recordDate <= filters.toDate;
+            });
+          }
           return filtered;
         };
 
