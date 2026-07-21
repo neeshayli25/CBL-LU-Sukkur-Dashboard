@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Layout } from './Layout';
 import type { SectionConfig, ColumnSchema } from '../config/sectionSchemas';
-import { Plus, Save, Trash2, Download, Edit2, X, RefreshCw } from 'lucide-react';
+import { Plus, Save, Trash2, Download, Edit2, X, RefreshCw, History, ArrowRight, User } from 'lucide-react';
 import { iconMap } from './iconMap';
-import { usePermissions } from '@cbl/auth';
+import { usePermissions, useAuth } from '@cbl/auth';
 import { useModuleData } from '../hooks/useModuleData';
+import { useFilters } from '../context/FilterContext';
 
 interface DataEntrySectionProps {
   schema: SectionConfig;
@@ -12,10 +13,16 @@ interface DataEntrySectionProps {
 
 export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) => {
   const { data: entries, loading, fetchAll, createRecord, updateRecord, deleteRecord } = useModuleData(schema.id);
+  const { user } = useAuth();
+  const { filters } = useFilters();
 
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [formData, setFormData] = useState<any>({});
+  
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<any>({});
+
+  const [statusHistoryModal, setStatusHistoryModal] = useState<{ isOpen: boolean; record: any | null }>({ isOpen: false, record: null });
 
   const { 
     canAddData, 
@@ -29,11 +36,24 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
     fetchAll();
   }, [schema.id, fetchAll]);
 
-  const applyComputes = (data: any, currentSchema: SectionConfig) => {
+  // Apply context filters
+  const filteredEntries = entries.filter(entry => {
+    if (filters.department && filters.department !== 'All' && entry.department_id !== filters.department) return false;
+    if (filters.status && filters.status !== 'All' && entry.status_id !== filters.status) return false;
+    
+    const recordDate = entry.date || entry.target_date;
+    if (filters.year && filters.year !== 'All' && recordDate && !recordDate.startsWith(filters.year)) return false;
+    if (filters.fromDate && recordDate && recordDate < filters.fromDate) return false;
+    if (filters.toDate && recordDate && recordDate > filters.toDate) return false;
+    
+    return true;
+  });
+
+  const applyComputes = (data: any, currentSchema: SectionConfig, allEntries: any[]) => {
     const nextData = { ...data };
     currentSchema.columns.forEach(col => {
       if (col.compute) {
-        nextData[col.key] = col.compute(nextData);
+        nextData[col.key] = col.compute(nextData, allEntries);
       }
     });
     return nextData;
@@ -48,19 +68,42 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
 
     if (isEdit) {
       const newEditData = { ...editFormData, [name]: finalValue };
-      setEditFormData(applyComputes(newEditData, schema));
+      setEditFormData(applyComputes(newEditData, schema, entries));
     } else {
       const newData = { ...formData, [name]: finalValue };
-      setFormData(applyComputes(newData, schema));
+      setFormData(applyComputes(newData, schema, entries));
+    }
+  };
+
+  const handleStatusChange = async (record: any, newStatus: string) => {
+    if (record.status_id === newStatus) return; // No change
+
+    const historyEntry = {
+      user: user?.name || "Bypass User",
+      oldStatus: record.status_id || "None",
+      newStatus,
+      timestamp: new Date().toISOString()
+    };
+
+    const newHistory = [...(record.statusHistory || []), historyEntry];
+    
+    const result = await updateRecord(record.id, { 
+      status_id: newStatus,
+      statusHistory: newHistory
+    });
+
+    if (!result.success) {
+      alert(`Error updating status: ${result.message}`);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const dataToSave = applyComputes(formData, schema);
+    const dataToSave = applyComputes(formData, schema, entries);
     const result = await createRecord(dataToSave);
     if (result.success) {
       setFormData({});
+      setIsAddModalOpen(false);
     } else {
       alert(`Error adding record: ${result.message}`);
     }
@@ -79,7 +122,23 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
 
   const saveEdit = async () => {
     if (editingId) {
-      const result = await updateRecord(editingId, applyComputes(editFormData, schema));
+      const originalRecord = entries.find(e => e.id === editingId);
+      const updatedData = applyComputes(editFormData, schema, entries);
+
+      // Handle status change audit log during inline edit
+      if (originalRecord && originalRecord.status_id !== updatedData.status_id) {
+        updatedData.statusHistory = [
+          ...(originalRecord.statusHistory || []),
+          {
+            user: user?.name || "Bypass User",
+            oldStatus: originalRecord.status_id || "None",
+            newStatus: updatedData.status_id,
+            timestamp: new Date().toISOString()
+          }
+        ];
+      }
+
+      const result = await updateRecord(editingId, updatedData);
       if (result.success) {
         setEditingId(null);
       } else {
@@ -94,16 +153,15 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
   };
 
   const exportCSV = () => {
-    if (entries.length === 0) return;
+    if (filteredEntries.length === 0) return;
     
     const headers = schema.columns.map(col => col.label);
     const csvRows = [];
-    csvRows.push(headers.join(',')); // Header row
+    csvRows.push(headers.join(','));
 
-    for (const entry of entries) {
+    for (const entry of filteredEntries) {
       const row = schema.columns.map(col => {
         let val = entry[col.key] || '';
-        // Escape quotes and commas
         val = val.toString().replace(/"/g, '""');
         if (val.search(/("|,|\n)/g) >= 0) {
           val = `"${val}"`;
@@ -128,8 +186,6 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
   const renderField = (col: ColumnSchema, value: any, onChange: (e: any, isEdit: boolean) => void, isEdit = false) => {
     const commonClasses = `w-full px-3 py-2 border border-border rounded-md text-sm ${col.readonly ? 'bg-muted/50 text-muted-foreground' : 'bg-background text-foreground'} focus:outline-none focus:ring-1 focus:ring-primary`;
     
-    // If it's the status field and user cannot approve, they can't change it to Closed
-    // We handle this by disabling the "Closed" option if !canApproveRecords()
     if (col.type === 'select') {
       return (
         <select 
@@ -142,7 +198,7 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
         >
           <option value="">Select...</option>
           {col.options?.map(opt => {
-             const isDisabled = (col.key === 'status_id' && opt === 'Closed' && !canApproveRecords());
+             const isDisabled = (col.key === 'status_id' && opt === 'Close' && !canApproveRecords());
              return <option key={opt} value={opt} disabled={isDisabled}>{opt}</option>;
           })}
         </select>
@@ -176,31 +232,53 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
     );
   };
 
+  const getStatusBadgeClass = (status: string) => {
+    switch(status?.toLowerCase()) {
+      case 'open': return 'badge-danger';
+      case 'close':
+      case 'closed': return 'badge-success';
+      case 'pending':
+      case 'work in progress': return 'badge-warning';
+      default: return 'badge-neutral';
+    }
+  };
+
   const IconComponent = iconMap[schema.icon];
 
   return (
     <Layout>
-      <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="space-y-6 animate-fade-in-up">
         
         {/* Header Section styled with accent color */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-card border card-shadow" style={{ color: schema.accentColor, borderColor: schema.accentColor + '40' }}>
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-2xl glass-panel border shadow-lg" style={{ color: schema.accentColor, borderColor: schema.accentColor + '40' }}>
               {IconComponent && <IconComponent className="h-5 w-5" />}
             </div>
             <h1 className="text-2xl font-bold" style={{ color: schema.accentColor }}>{schema.title}</h1>
           </div>
           
-          {canExportCSV() && (
-            <button 
-              onClick={exportCSV}
-              className="flex items-center gap-2 px-4 py-2 rounded-md font-medium text-white transition-colors shadow-sm hover:opacity-90"
-              style={{ backgroundColor: schema.accentColor }}
-            >
-              <Download className="h-4 w-4" />
-              Export to CSV
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {canExportCSV() && (
+              <button 
+                onClick={exportCSV}
+                className="flex items-center gap-2 px-4 py-2 rounded-md font-medium text-foreground bg-card border border-border transition-colors shadow-sm hover:bg-muted"
+              >
+                <Download className="h-4 w-4" />
+                Export to CSV
+              </button>
+            )}
+            {canAddData() && (
+              <button 
+                onClick={() => setIsAddModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-md font-medium text-white transition-colors shadow-sm hover:opacity-90"
+                style={{ backgroundColor: schema.accentColor }}
+              >
+                <Plus className="h-4 w-4" />
+                Add Entry
+              </button>
+            )}
+          </div>
         </div>
 
         {loading && (
@@ -209,68 +287,150 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
           </div>
         )}
 
-        {/* Data Entry Form */}
-        {canAddData() && (
-          <div className="bg-card rounded-xl border border-border card-shadow p-5" style={{ borderLeft: `4px solid ${schema.accentColor}` }}>
-            <h2 className="text-lg font-semibold mb-4 text-foreground">Add New Record</h2>
-            <form onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {schema.columns.map(col => (
-                  <div key={col.key}>
-                    <label className="block text-sm font-medium text-muted-foreground mb-1">
-                      {col.label} {col.required && <span className="text-danger">*</span>}
-                    </label>
-                    {renderField(col, formData[col.key], handleInputChange, false)}
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 flex justify-end">
-                <button 
-                  type="submit" 
-                  className="flex items-center gap-2 px-4 py-2 rounded-md font-medium text-white transition-colors shadow-sm hover:opacity-90"
-                  style={{ backgroundColor: schema.accentColor }}
-                >
-                  <Plus className="h-4 w-4" />
-                  Add Entry
+        {/* Add Entry Modal */}
+        {isAddModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+            <div className="glass-panel bg-card/95 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col border border-border animate-fade-in-up">
+              <div className="flex justify-between items-center p-5 border-b border-border/50 bg-muted/20">
+                <h2 className="text-xl font-bold" style={{ color: schema.accentColor }}>New {schema.title} Record</h2>
+                <button onClick={() => setIsAddModalOpen(false)} className="text-muted-foreground hover:text-foreground">
+                  <X className="h-6 w-6" />
                 </button>
               </div>
-            </form>
+              <div className="p-6 overflow-y-auto flex-1">
+                <form id="add-form" onSubmit={handleSubmit}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {schema.columns.filter(c => !c.hideFromForm).map(col => (
+                      <div key={col.key}>
+                        <label className="block text-sm font-medium text-muted-foreground mb-1">
+                          {col.label} {col.required && <span className="text-danger">*</span>}
+                        </label>
+                        {renderField(col, formData[col.key], handleInputChange, false)}
+                      </div>
+                    ))}
+                  </div>
+                </form>
+              </div>
+              <div className="p-5 border-t border-border/50 bg-muted/20 flex justify-end gap-3">
+                <button 
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="px-5 py-2.5 rounded-lg font-medium text-muted-foreground hover:bg-muted transition-all duration-200"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  form="add-form"
+                  className="flex items-center gap-2 px-6 py-2 rounded-md font-medium text-white transition-colors shadow-sm hover:opacity-90"
+                  style={{ backgroundColor: schema.accentColor }}
+                >
+                  <Save className="h-4 w-4" />
+                  Save Record
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Status History Modal */}
+        {statusHistoryModal.isOpen && statusHistoryModal.record && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+            <div className="glass-panel bg-card/95 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-border animate-fade-in-up">
+              <div className="flex justify-between items-center p-5 border-b border-border/50 bg-muted/20">
+                <h2 className="text-lg font-bold flex items-center gap-2 text-foreground">
+                  <History className="h-5 w-5" /> Status Audit Log
+                </h2>
+                <button onClick={() => setStatusHistoryModal({ isOpen: false, record: null })} className="text-muted-foreground hover:text-foreground">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="p-6 overflow-y-auto max-h-[60vh] space-y-4">
+                {(!statusHistoryModal.record.statusHistory || statusHistoryModal.record.statusHistory.length === 0) ? (
+                  <p className="text-sm text-muted-foreground text-center">No status history found for this record.</p>
+                ) : (
+                  statusHistoryModal.record.statusHistory.map((history: any, idx: number) => (
+                    <div key={idx} className="flex items-start gap-4 p-3 rounded-lg border border-border bg-muted/20">
+                      <div className="bg-primary/10 p-2 rounded-full text-primary mt-1">
+                        <User className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex justify-between items-start mb-1">
+                          <span className="font-semibold text-sm text-foreground">{history.user}</span>
+                          <span className="text-xs text-muted-foreground">{new Date(history.timestamp).toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="bg-muted px-2 py-0.5 rounded text-muted-foreground line-through">{history.oldStatus}</span>
+                          <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                          <span className="bg-primary/10 text-primary px-2 py-0.5 rounded font-medium">{history.newStatus}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         )}
 
         {/* Table View */}
-        <div className="bg-card rounded-xl border border-border card-shadow overflow-hidden">
+        <div className="glass-panel bg-card/50 rounded-2xl border border-border shadow-lg overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
-              <thead className="text-xs text-muted-foreground uppercase bg-muted/50" style={{ borderBottom: `2px solid ${schema.accentColor}` }}>
+              <thead className="text-xs text-muted-foreground uppercase bg-muted/30" style={{ borderBottom: `2px solid ${schema.accentColor}` }}>
                 <tr>
                   {schema.columns.map(col => (
                     <th key={col.key} className="px-4 py-4 font-semibold">{col.label}</th>
                   ))}
+                  <th className="px-4 py-4 font-semibold text-center">Status Audit</th>
                   {(canEditData() || canDeleteData()) && (
                     <th className="px-4 py-4 font-semibold text-right">Actions</th>
                   )}
                 </tr>
               </thead>
               <tbody>
-                {entries.length === 0 ? (
+                {filteredEntries.length === 0 ? (
                   <tr>
-                    <td colSpan={schema.columns.length + 1} className="px-6 py-8 text-center text-muted-foreground">
-                      No records found.
+                    <td colSpan={schema.columns.length + 2} className="px-6 py-8 text-center text-muted-foreground">
+                      No records found matching filters. Click "Add Entry" to create one.
                     </td>
                   </tr>
                 ) : (
-                  entries.map((entry) => (
+                  filteredEntries.map((entry) => (
                     <tr key={entry.id} className="border-b border-border hover:bg-muted/30 transition-colors">
                       {schema.columns.map(col => (
                         <td key={col.key} className="px-4 py-3">
                           {editingId === entry.id ? (
                             renderField(col, editFormData[col.key], handleInputChange, true)
                           ) : (
-                            <span className="text-foreground">{entry[col.key] || '-'}</span>
+                            col.key === 'status_id' && canEditData() ? (
+                              <select 
+                                value={entry.status_id || ''} 
+                                onChange={(e) => handleStatusChange(entry, e.target.value)}
+                                className={`${getStatusBadgeClass(entry.status_id)} cursor-pointer transition-colors outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-background`}
+                              >
+                                {col.options?.map(opt => (
+                                  <option key={opt} value={opt} disabled={opt === 'Close' && !canApproveRecords()}>{opt}</option>
+                                ))}
+                              </select>
+                            ) : (
+                              col.key === 'status_id' ? (
+                                <span className={getStatusBadgeClass(entry.status_id)}>{entry[col.key] || '-'}</span>
+                              ) : (
+                                <span className="text-foreground font-medium">{entry[col.key] || '-'}</span>
+                              )
+                            )
                           )}
                         </td>
                       ))}
+                      <td className="px-4 py-3 text-center">
+                        <button 
+                          onClick={() => setStatusHistoryModal({ isOpen: true, record: entry })}
+                          className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded transition-colors" 
+                          title="View Status History"
+                        >
+                          <History className="h-4 w-4 mx-auto" />
+                        </button>
+                      </td>
                       {(canEditData() || canDeleteData()) && (
                         <td className="px-4 py-3 text-right whitespace-nowrap">
                           {editingId === entry.id ? (

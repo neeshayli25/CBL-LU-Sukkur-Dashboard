@@ -72,7 +72,7 @@ export const Analytics = () => {
   const categoryData = getDistribution('hazard_category_id');
 
   const ChartCard = ({ title, data }: { title: string, data: any[] }) => (
-    <div className="bg-card p-5 rounded-lg border border-border card-shadow flex flex-col items-center">
+    <div className="glass-panel p-5 rounded-2xl border border-border hover-lift flex flex-col items-center">
       <h3 className="text-lg font-semibold text-foreground mb-2 w-full text-left">{title}</h3>
       <div className="h-[250px] w-full">
         {data.length > 0 ? (
@@ -96,7 +96,7 @@ export const Analytics = () => {
 
   return (
     <Layout>
-      <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="space-y-6 animate-fade-in-up">
         <div className="flex items-center gap-3">
           <BarChart3 className="h-8 w-8 text-primary" />
           <h1 className="text-2xl font-bold text-foreground">Analytics Overview (Hazards)</h1>
@@ -104,22 +104,22 @@ export const Analytics = () => {
         
         {/* Numeric Summaries */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-card p-5 rounded-lg border border-border card-shadow">
+          <div className="glass-panel p-5 rounded-2xl border border-border hover-lift">
             <div className="flex items-center gap-3 mb-2 text-muted-foreground"><ShieldCheck className="h-5 w-5"/> Closure Rate</div>
             <p className="text-3xl font-bold text-success">{closureRate}%</p>
             <p className="text-xs text-muted-foreground mt-1">Across filtered set</p>
           </div>
-          <div className="bg-card p-5 rounded-lg border border-border card-shadow">
+          <div className="glass-panel p-5 rounded-2xl border border-border hover-lift">
             <div className="flex items-center gap-3 mb-2 text-muted-foreground"><Timer className="h-5 w-5"/> Avg Days to Close</div>
             <p className="text-3xl font-bold text-foreground">12 days</p>
             <p className="text-xs text-muted-foreground mt-1">For resolved issues</p>
           </div>
-          <div className="bg-card p-5 rounded-lg border border-border card-shadow">
+          <div className="glass-panel p-5 rounded-2xl border border-border hover-lift">
             <div className="flex items-center gap-3 mb-2 text-muted-foreground"><TrendingUp className="h-5 w-5"/> High/Critical Risk</div>
             <p className="text-3xl font-bold text-danger">{highPriorityPct}%</p>
             <p className="text-xs text-muted-foreground mt-1">Of total hazards</p>
           </div>
-          <div className="bg-card p-5 rounded-lg border border-border card-shadow">
+          <div className="glass-panel p-5 rounded-2xl border border-border hover-lift">
             <div className="flex items-center gap-3 mb-2 text-muted-foreground"><BarChart3 className="h-5 w-5"/> Total Logged</div>
             <p className="text-3xl font-bold text-foreground">{total}</p>
             <p className="text-xs text-muted-foreground mt-1">In current filter</p>
