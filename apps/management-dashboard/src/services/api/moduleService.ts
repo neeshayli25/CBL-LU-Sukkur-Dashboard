@@ -31,19 +31,8 @@ export const moduleService = {
     
     const newRecord = {
       ...record,
-      id: crypto.randomUUID(),
-      s_no: `S-${data.length + 1001}`
+      id: crypto.randomUUID()
     };
-    
-    // Default status initialization and logging
-    if (newRecord.status_id) {
-      newRecord.statusHistory = [{
-        user: "System (Auto)",
-        oldStatus: "None",
-        newStatus: newRecord.status_id,
-        timestamp: new Date().toISOString()
-      }];
-    }
     
     data.push(newRecord);
     localStorage.setItem(key, JSON.stringify(data));

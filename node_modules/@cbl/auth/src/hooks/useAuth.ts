@@ -20,9 +20,9 @@ export const useAuth = () => {
         await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
         const fakeUser = {
           id: "999",
-          email: "testuser@lu-sukkur.com",
-          role: "System Administrator", // Change this to test different roles
-          get name() { return `${this.role} (Bypass)`; },
+          email: "admin@lu-sukkur.com",
+          name: "System Administrator (Bypass)",
+          role: "System Administrator", 
           department_id: "HSE"
         };
         loginUser(fakeUser, "fake-dev-token");
