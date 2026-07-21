@@ -1,6 +1,9 @@
+import React, { useState } from 'react';
 import { usePermissions } from '@cbl/auth';
+import { FileText, Download, Filter, Calendar } from 'lucide-react';
 import { DEPARTMENTS, STATUSES, RISK_RATINGS, INCIDENT_CATEGORIES } from '../config/constants';
 import { exportCSV } from '../utils/exportUtils';
+import { Layout } from '../components/Layout';
 
 const REPORT_TYPES = [
   "Incident Report",
@@ -106,7 +109,7 @@ export const Reports = () => {
 
   return (
     <Layout>
-      <div className="space-y-6 animate-in fade-in duration-500 max-w-5xl mx-auto">
+      <div className="space-y-6 animate-fade-in-up max-w-5xl mx-auto">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <FileText className="h-8 w-8 text-primary" />
@@ -124,7 +127,7 @@ export const Reports = () => {
           )}
         </div>
 
-        <div className="bg-card p-6 rounded-xl border border-border card-shadow">
+        <div className="glass-panel p-6 rounded-2xl border border-border">
           <h2 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
             <Filter className="h-5 w-5 text-muted-foreground" /> Report Configuration
           </h2>
