@@ -54,7 +54,7 @@ export const RISK_RATINGS = [
 
 export const STATUSES = [
   'Open',
-  'Close',
+  'Closed',
   'Pending',
   'Work in Progress',
   'Cancelled'

@@ -85,3 +85,26 @@
     box-shadow: 0 4px 6px -1px rgba(140, 29, 43, 0.05), 0 2px 4px -1px rgba(140, 29, 43, 0.03);
   }
 }
+
+/* Print Utilities for Reports */
+@media print {
+  .print-hide, header, aside, .md\\:hidden {
+    display: none !important;
+  }
+  
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  
+  .glass, .card-shadow, .bg-card, .glass-panel {
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+    background: transparent !important;
+  }
+  
+  @page {
+    margin: 1cm;
+    size: landscape;
+  }
+}

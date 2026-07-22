@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Layout } from './Layout';
 import type { SectionConfig, ColumnSchema } from '../config/sectionSchemas';
-import { Plus, Save, Trash2, Download, Edit2, X, RefreshCw, History, ArrowRight, User } from 'lucide-react';
+import { Plus, Save, Trash2, Download, Edit2, X, RefreshCw, History, ArrowRight, User, AlertTriangle } from 'lucide-react';
 import { iconMap } from './iconMap';
 import { usePermissions, useAuth } from '@cbl/auth';
 import { useModuleData } from '../hooks/useModuleData';
@@ -21,6 +21,7 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
   
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<any>({});
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const [statusHistoryModal, setStatusHistoryModal] = useState<{ isOpen: boolean; record: any | null }>({ isOpen: false, record: null });
 
@@ -97,9 +98,38 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
     }
   };
 
+  const validateFormData = (data: any): string | null => {
+    const today = new Date().toISOString().split('T')[0];
+    
+    if (['incident-log', 'hazard-reporting', 'near-miss'].includes(schema.id)) {
+      if (data.date && data.date > today) {
+        return "Report date cannot be in the future.";
+      }
+    }
+
+    if (schema.id === 'action-tracker') {
+      if (data.completion_date && data.completion_date > today) {
+        return "Completion date cannot be in the future.";
+      }
+      if (data.status_id === 'Closed' && !data.completion_date) {
+        return "A completion date is required to close a CAPA.";
+      }
+    }
+
+    return null;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setValidationError(null);
     const dataToSave = applyComputes(formData, schema, entries);
+    
+    const err = validateFormData(dataToSave);
+    if (err) {
+      setValidationError(err);
+      return;
+    }
+
     const result = await createRecord(dataToSave);
     if (result.success) {
       setFormData({});
@@ -124,6 +154,12 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
     if (editingId) {
       const originalRecord = entries.find(e => e.id === editingId);
       const updatedData = applyComputes(editFormData, schema, entries);
+
+      const err = validateFormData(updatedData);
+      if (err) {
+        alert(`Validation Error: ${err}`);
+        return;
+      }
 
       // Handle status change audit log during inline edit
       if (originalRecord && originalRecord.status_id !== updatedData.status_id) {
@@ -150,6 +186,7 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
   const cancelEdit = () => {
     setEditingId(null);
     setEditFormData({});
+    setValidationError(null);
   };
 
   const exportCSV = () => {
@@ -282,11 +319,28 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
             <div className="bg-card rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col border border-border">
               <div className="flex justify-between items-center p-4 border-b border-border bg-muted/30">
                 <h2 className="text-xl font-bold" style={{ color: schema.accentColor }}>New {schema.title} Record</h2>
-                <button onClick={() => setIsAddModalOpen(false)} className="text-muted-foreground hover:text-foreground">
+                <button 
+                  onClick={() => {
+                    setIsAddModalOpen(false);
+                    setValidationError(null);
+                  }} 
+                  className="text-muted-foreground hover:text-foreground"
+                >
                   <X className="h-6 w-6" />
                 </button>
               </div>
               <div className="p-6 overflow-y-auto flex-1">
+                {validationError && (
+                  <div className="mb-6 p-4 bg-danger/10 border border-danger/30 rounded-lg flex items-start gap-3">
+                    <div className="p-1 rounded-full bg-danger/20 text-danger shrink-0 mt-0.5">
+                      <AlertTriangle className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-danger">Validation Error</h4>
+                      <p className="text-sm text-danger/90 mt-1">{validationError}</p>
+                    </div>
+                  </div>
+                )}
                 <form id="add-form" onSubmit={handleSubmit}>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                     {schema.columns.filter(c => !c.hideFromForm).map(col => (

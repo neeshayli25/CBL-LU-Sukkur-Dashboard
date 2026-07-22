@@ -20,7 +20,8 @@ import {
   User,
   ChevronLeft,
   ChevronRight,
-  Menu
+  Menu,
+  Bell
 } from 'lucide-react';
 
 import { DEPARTMENTS } from '../config/constants';
@@ -46,6 +47,14 @@ const sidebarItems = [
 export const Layout = ({ children }: { children: React.ReactNode }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  
+  const mockNotifications = [
+    { id: 1, text: "CAPA #42 is Overdue", time: "2 hours ago", type: "warning" },
+    { id: 2, text: "New High-Priority Hazard Reported", time: "5 hours ago", type: "danger" },
+    { id: 3, text: "Monthly Incident Summary Ready", time: "1 day ago", type: "info" }
+  ];
+
   const { logout, user } = useAuth();
   const { canViewReports, isDepartmentRestricted } = usePermissions();
   const navigate = useNavigate();
@@ -139,7 +148,43 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
             </div>
 
             <div className="flex items-center gap-2 border-l border-border pl-4">
-              <div className="hidden sm:flex flex-col items-end">
+              <div className="relative pr-2 flex items-center">
+                <button 
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="p-2 text-muted-foreground hover:text-foreground relative transition-colors rounded-md"
+                >
+                  <Bell className="h-5 w-5" />
+                  <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-danger border border-card"></span>
+                </button>
+                
+                {showNotifications && (
+                  <div className="absolute top-full right-0 mt-2 w-80 bg-card border border-border rounded-lg card-shadow z-50 overflow-hidden">
+                    <div className="p-3 border-b border-border flex justify-between items-center bg-muted/30">
+                      <h3 className="font-semibold text-sm">Notifications</h3>
+                      <button className="text-xs text-primary hover:underline">Mark all as read</button>
+                    </div>
+                    <div className="max-h-80 overflow-y-auto">
+                      {mockNotifications.map(n => (
+                        <div key={n.id} className="p-3 border-b border-border hover:bg-muted/50 cursor-pointer transition-colors flex gap-3 items-start">
+                          <div className={`mt-0.5 h-2 w-2 rounded-full shrink-0 ${
+                            n.type === 'danger' ? 'bg-danger' : 
+                            n.type === 'warning' ? 'bg-secondary' : 'bg-primary'
+                          }`} />
+                          <div>
+                            <p className="text-sm text-foreground leading-tight">{n.text}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{n.time}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="p-2 text-center bg-muted/30 border-t border-border">
+                      <button className="text-xs font-medium text-muted-foreground hover:text-foreground">View all notifications</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="hidden sm:flex flex-col items-end border-l border-border pl-4">
                 <span className="text-sm font-medium leading-none">{user?.name || 'User'}</span>
                 <span className="text-xs text-muted-foreground mt-1">{user?.role || 'Guest'}</span>
               </div>
