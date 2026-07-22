@@ -18,7 +18,7 @@ export const Settings = () => {
 
   return (
     <Layout>
-      <div className="space-y-8 animate-fade-in-up max-w-4xl">
+      <div className="space-y-8 animate-in fade-in duration-500 max-w-4xl">
         <div className="flex items-center gap-3">
           <SettingsIcon className="h-8 w-8 text-primary" />
           <h1 className="text-2xl font-bold text-foreground">Dashboard Settings</h1>
@@ -40,7 +40,7 @@ export const Settings = () => {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Department Scope</p>
-              <p className="font-medium text-foreground">{user?.department || 'All Departments (Admin)'}</p>
+              <p className="font-medium text-foreground">{user?.department_id || 'All Departments (Admin)'}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">System Roles</p>

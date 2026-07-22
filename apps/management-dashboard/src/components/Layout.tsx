@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavLink, useNavigate, Link } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth, usePermissions } from '@cbl/auth';
 import { useFilters } from '../context/FilterContext';
 import {
@@ -20,9 +20,7 @@ import {
   User,
   ChevronLeft,
   ChevronRight,
-  Menu,
-  Moon,
-  Sun
+  Menu
 } from 'lucide-react';
 
 import { DEPARTMENTS } from '../config/constants';
@@ -48,7 +46,6 @@ const sidebarItems = [
 export const Layout = ({ children }: { children: React.ReactNode }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
   const { logout, user } = useAuth();
   const { canViewReports, isDepartmentRestricted } = usePermissions();
   const navigate = useNavigate();
@@ -68,20 +65,10 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
     navigate('/login');
   };
 
-  const toggleTheme = () => {
-    if (isDark) {
-      document.documentElement.classList.remove('dark');
-      setIsDark(false);
-    } else {
-      document.documentElement.classList.add('dark');
-      setIsDark(true);
-    }
-  };
-
   return (
-    <div className={`min-h-screen flex flex-col transition-colors duration-500 ${isDark ? 'bg-mesh-dark bg-[#1A1412]' : 'bg-mesh-light bg-[#FAF6EF]'}`}>
+    <div className="min-h-screen flex flex-col bg-background text-foreground">
       {/* Top Navigation */}
-      <header className="sticky top-0 z-50 w-full border-b border-border bg-card/80 backdrop-blur-md shadow-sm">
+      <header className="sticky top-0 z-50 w-full border-b border-border bg-card shadow-sm">
         <div className="flex h-16 items-center px-4 md:px-6">
           <div className="flex items-center gap-2 md:gap-4">
             <button
@@ -152,23 +139,13 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
             </div>
 
             <div className="flex items-center gap-2 border-l border-border pl-4">
-              <button
-                onClick={toggleTheme}
-                className="p-2 text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-md transition-colors"
-                title="Toggle Theme"
-              >
-                {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-              </button>
-              
-              <Link to="/profile" className="flex items-center gap-2 hover:bg-muted/50 p-1.5 rounded-lg transition-colors cursor-pointer text-left">
-                <div className="hidden sm:flex flex-col items-end">
-                  <span className="text-sm font-medium leading-none">{user?.name || 'User'}</span>
-                  <span className="text-xs text-muted-foreground mt-1">{user?.role || 'Guest'}</span>
-                </div>
-                <div className="h-8 w-8 rounded-full bg-secondary text-white flex items-center justify-center font-bold">
-                  <User className="h-4 w-4" />
-                </div>
-              </Link>
+              <div className="hidden sm:flex flex-col items-end">
+                <span className="text-sm font-medium leading-none">{user?.name || 'User'}</span>
+                <span className="text-xs text-muted-foreground mt-1">{user?.role || 'Guest'}</span>
+              </div>
+              <div className="h-8 w-8 rounded-full bg-secondary text-white flex items-center justify-center font-bold">
+                <User className="h-4 w-4" />
+              </div>
               <button 
                 onClick={handleLogout}
                 className="ml-2 p-2 text-muted-foreground hover:text-danger rounded-md transition-colors"
@@ -187,7 +164,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
           className={`${
             collapsed ? 'w-16' : 'w-64'
           } ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} 
-          fixed md:relative z-40 h-[calc(100vh-4rem)] border-r border-border bg-card/80 backdrop-blur-md transition-all duration-300 ease-in-out flex flex-col shadow-lg`}
+          fixed md:relative z-40 h-[calc(100vh-4rem)] border-r border-border bg-card transition-all duration-300 ease-in-out flex flex-col`}
         >
           <div className="flex-1 overflow-y-auto py-4">
             <nav className="space-y-1 px-2">
@@ -234,8 +211,8 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
         )}
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 text-foreground">
-          <div className="mx-auto max-w-7xl animate-fade-in-up">
+        <main className="flex-1 overflow-y-auto bg-background p-4 md:p-6">
+          <div className="mx-auto max-w-7xl">
             {/* Mobile Filters (visible only on small screens) */}
             <div className="md:hidden flex flex-wrap gap-2 mb-4 bg-card p-3 rounded-md border border-border shadow-sm">
               <input 

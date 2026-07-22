@@ -232,27 +232,16 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
     );
   };
 
-  const getStatusBadgeClass = (status: string) => {
-    switch(status?.toLowerCase()) {
-      case 'open': return 'badge-danger';
-      case 'close':
-      case 'closed': return 'badge-success';
-      case 'pending':
-      case 'work in progress': return 'badge-warning';
-      default: return 'badge-neutral';
-    }
-  };
-
   const IconComponent = iconMap[schema.icon];
 
   return (
     <Layout>
-      <div className="space-y-6 animate-fade-in-up">
+      <div className="space-y-6 animate-in fade-in duration-500">
         
         {/* Header Section styled with accent color */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-2xl glass-panel border shadow-lg" style={{ color: schema.accentColor, borderColor: schema.accentColor + '40' }}>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-card border card-shadow" style={{ color: schema.accentColor, borderColor: schema.accentColor + '40' }}>
               {IconComponent && <IconComponent className="h-5 w-5" />}
             </div>
             <h1 className="text-2xl font-bold" style={{ color: schema.accentColor }}>{schema.title}</h1>
@@ -289,9 +278,9 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
 
         {/* Add Entry Modal */}
         {isAddModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-            <div className="glass-panel bg-card/95 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col border border-border animate-fade-in-up">
-              <div className="flex justify-between items-center p-5 border-b border-border/50 bg-muted/20">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-card rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col border border-border">
+              <div className="flex justify-between items-center p-4 border-b border-border bg-muted/30">
                 <h2 className="text-xl font-bold" style={{ color: schema.accentColor }}>New {schema.title} Record</h2>
                 <button onClick={() => setIsAddModalOpen(false)} className="text-muted-foreground hover:text-foreground">
                   <X className="h-6 w-6" />
@@ -311,10 +300,10 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
                   </div>
                 </form>
               </div>
-              <div className="p-5 border-t border-border/50 bg-muted/20 flex justify-end gap-3">
+              <div className="p-4 border-t border-border bg-muted/30 flex justify-end gap-3">
                 <button 
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-5 py-2.5 rounded-lg font-medium text-muted-foreground hover:bg-muted transition-all duration-200"
+                  className="px-4 py-2 rounded-md font-medium text-muted-foreground hover:bg-muted transition-colors"
                 >
                   Cancel
                 </button>
@@ -334,9 +323,9 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
 
         {/* Status History Modal */}
         {statusHistoryModal.isOpen && statusHistoryModal.record && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-            <div className="glass-panel bg-card/95 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-border animate-fade-in-up">
-              <div className="flex justify-between items-center p-5 border-b border-border/50 bg-muted/20">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-card rounded-xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col border border-border">
+              <div className="flex justify-between items-center p-4 border-b border-border bg-muted/30">
                 <h2 className="text-lg font-bold flex items-center gap-2 text-foreground">
                   <History className="h-5 w-5" /> Status Audit Log
                 </h2>
@@ -373,10 +362,10 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
         )}
 
         {/* Table View */}
-        <div className="glass-panel bg-card/50 rounded-2xl border border-border shadow-lg overflow-hidden">
+        <div className="bg-card rounded-xl border border-border card-shadow overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
-              <thead className="text-xs text-muted-foreground uppercase bg-muted/30" style={{ borderBottom: `2px solid ${schema.accentColor}` }}>
+              <thead className="text-xs text-muted-foreground uppercase bg-muted/50" style={{ borderBottom: `2px solid ${schema.accentColor}` }}>
                 <tr>
                   {schema.columns.map(col => (
                     <th key={col.key} className="px-4 py-4 font-semibold">{col.label}</th>
@@ -406,18 +395,14 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
                               <select 
                                 value={entry.status_id || ''} 
                                 onChange={(e) => handleStatusChange(entry, e.target.value)}
-                                className={`${getStatusBadgeClass(entry.status_id)} cursor-pointer transition-colors outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-background`}
+                                className="bg-transparent border border-transparent hover:border-border rounded px-1 py-0.5 focus:ring-1 focus:ring-primary text-sm font-medium cursor-pointer"
                               >
                                 {col.options?.map(opt => (
                                   <option key={opt} value={opt} disabled={opt === 'Close' && !canApproveRecords()}>{opt}</option>
                                 ))}
                               </select>
                             ) : (
-                              col.key === 'status_id' ? (
-                                <span className={getStatusBadgeClass(entry.status_id)}>{entry[col.key] || '-'}</span>
-                              ) : (
-                                <span className="text-foreground font-medium">{entry[col.key] || '-'}</span>
-                              )
+                              <span className="text-foreground">{entry[col.key] || '-'}</span>
                             )
                           )}
                         </td>
