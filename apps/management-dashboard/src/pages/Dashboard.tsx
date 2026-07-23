@@ -1,19 +1,84 @@
 import { useEffect, useState } from 'react';
-import { 
-  PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, LineChart, Line 
+import { useNavigate } from 'react-router-dom';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, LineChart, Line
 } from 'recharts';
 import { Layout } from '../components/Layout';
+import { CenterModal } from '../components/CenterModal';
+import { DonutChartWithLegend } from '../components/DonutChartWithLegend';
 import { useFilters } from '../context/FilterContext';
-import { ShieldCheck, AlertCircle, Clock, CheckCircle2, FileWarning, Timer, Activity, HeartPulse, Flame, Calendar, ListTodo, ShieldAlert, Search, Users, BookOpen, TrendingUp, AlertTriangle } from 'lucide-react';
+import { AlertCircle, Clock, CheckCircle2, FileWarning, Timer, Activity, HeartPulse, Flame, Calendar, ListTodo, ShieldAlert, Search, Users, BookOpen, TrendingUp, AlertTriangle, ArrowRight, Info, CheckCircle, XCircle } from 'lucide-react';
 import { moduleService } from '../services/api/moduleService';
 
 import { CHART_COLORS, PIE_COLORS } from '../config/constants';
+import { useDashboardMetrics, type DashboardRawData, type MetricItem } from '../hooks/useDashboardMetrics';
+
 
 const PIE_COLORS_STATUS = [CHART_COLORS.warning, CHART_COLORS.success, CHART_COLORS.danger];
 const PIE_COLORS_RISK = [CHART_COLORS.info, CHART_COLORS.success, CHART_COLORS.warning, CHART_COLORS.danger];
 
-const StatCard = ({ title, value, icon, color }: any) => (
-  <div className="bg-card rounded-xl p-5 border-l-4 border-t border-r border-b border-border card-shadow flex flex-col justify-between" style={{ borderLeftColor: color || CHART_COLORS.maroon }}>
+const getStatusColor = (status?: string) => {
+  switch(status) {
+    case 'success': return 'text-success';
+    case 'warning': return 'text-warning'; // or text-amber-500 depending on tailwind setup
+    case 'danger': return 'text-danger';
+    default: return 'text-muted-foreground';
+  }
+};
+
+const getStatusBgColor = (status?: string) => {
+  switch(status) {
+    case 'success': return 'bg-success/10';
+    case 'warning': return 'bg-warning/10';
+    case 'danger': return 'bg-danger/10';
+    default: return 'bg-muted/50';
+  }
+};
+
+const MetricRow = ({ metric }: { metric: MetricItem }) => {
+  const navigate = useNavigate();
+  const isClickable = metric.path && !metric.isPendingModule;
+
+  return (
+    <div 
+      onClick={() => isClickable && navigate(metric.path!)}
+      className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-4 px-4 border border-border/50 bg-card rounded-xl group transition-all ${isClickable ? 'cursor-pointer hover:bg-muted/30 hover:shadow-md hover:border-primary/30' : ''}`}
+    >
+      <div className="flex items-center gap-3 min-w-0">
+        <div className={`p-2 rounded-full flex-shrink-0 ${metric.bgClass || getStatusBgColor(metric.status)} ${metric.iconClass || getStatusColor(metric.status)}`}>
+          {metric.status === 'success' && <CheckCircle className="w-5 h-5" />}
+          {metric.status === 'warning' && <AlertTriangle className="w-5 h-5" />}
+          {metric.status === 'danger' && <XCircle className="w-5 h-5" />}
+          {(!metric.status || metric.status === 'neutral') && <Info className="w-5 h-5" />}
+        </div>
+        <div className="min-w-0">
+          <span className={`font-semibold text-sm block truncate ${isClickable ? 'text-foreground group-hover:text-primary transition-colors' : 'text-foreground'}`} title={metric.name}>
+            {metric.name}
+          </span>
+          {metric.isPendingModule && (
+            <span className="mt-1 inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground ring-1 ring-inset ring-muted-foreground/20">
+              Pending Module
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="text-left sm:text-right flex flex-col sm:items-end flex-shrink-0 ml-11 sm:ml-0">
+        <div className={`font-bold text-lg ${getStatusColor(metric.status)}`}>
+          {metric.value} <span className="text-sm font-normal text-muted-foreground ml-1">{metric.unit}</span>
+        </div>
+        {metric.target !== undefined && (
+          <div className="text-xs text-muted-foreground mt-0.5">Target: {metric.target}</div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const StatCard = ({ title, value, icon, color, onClick }: any) => (
+  <div 
+    onClick={onClick}
+    className={`bg-card rounded-xl p-5 border-l-4 border-t border-r border-b border-border card-shadow flex flex-col justify-between ${onClick ? 'cursor-pointer hover:shadow-md hover:scale-[1.02] hover:bg-muted/30 transition-all' : ''}`} 
+    style={{ borderLeftColor: color || CHART_COLORS.maroon }}
+  >
     <div className="flex justify-between items-start mb-4">
       <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
       <div className="p-2 bg-muted/50 rounded-md" style={{ color: color || CHART_COLORS.maroon }}>{icon}</div>
@@ -25,6 +90,7 @@ const StatCard = ({ title, value, icon, color }: any) => (
 );
 
 export const Dashboard = () => {
+  const navigate = useNavigate();
   const { filters } = useFilters();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('Incidents');
@@ -35,16 +101,26 @@ export const Dashboard = () => {
   const [capas, setCapas] = useState<any[]>([]);
   const [training, setTraining] = useState<any[]>([]);
 
+  const [rawData, setRawData] = useState<DashboardRawData>({
+    hazards: [], nearMisses: [], incidents: [], capas: [], training: [], inspections: [], drills: [], legal: []
+  });
+
+  const [isLeadingOpen, setIsLeadingOpen] = useState(false);
+  const [isLaggingOpen, setIsLaggingOpen] = useState(false);
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [hRes, nmRes, incRes, capRes, trRes] = await Promise.all([
+        const [hRes, nmRes, incRes, capRes, trRes, insRes, drRes, legRes] = await Promise.all([
           moduleService.getAll('hazard-reporting'),
           moduleService.getAll('near-miss'),
           moduleService.getAll('incident-log'),
           moduleService.getAll('action-tracker'),
           moduleService.getAll('training-records'),
+          moduleService.getAll('inspection-records'),
+          moduleService.getAll('emergency-drills'),
+          moduleService.getAll('legal-compliance')
         ]);
 
         const applyFilters = (data: any[]) => {
@@ -70,11 +146,25 @@ export const Dashboard = () => {
           return filtered;
         };
 
+        // Keep original state for existing charts/tabs to work without refactoring everything
         setHazards(applyFilters(hRes.data));
         setNearMisses(applyFilters(nmRes.data));
         setIncidents(applyFilters(incRes.data));
         setCapas(applyFilters(capRes.data));
         setTraining(applyFilters(trRes.data));
+
+        // Set raw data for new detail views
+        setRawData({
+          hazards: applyFilters(hRes.data),
+          nearMisses: applyFilters(nmRes.data),
+          incidents: applyFilters(incRes.data),
+          capas: applyFilters(capRes.data),
+          training: applyFilters(trRes.data),
+          inspections: applyFilters(insRes.data),
+          drills: applyFilters(drRes.data),
+          legal: applyFilters(legRes.data),
+          totalOrgManhours: 500000 // Placeholder until setting is available
+        });
       } catch (err) {
         console.error("Failed to load dashboard data", err);
       } finally {
@@ -84,6 +174,8 @@ export const Dashboard = () => {
     
     fetchData();
   }, [filters]);
+
+  const { leadingMetricsDetail, laggingMetricsDetail } = useDashboardMetrics(rawData);
 
   if (loading) {
     return (
@@ -206,16 +298,22 @@ export const Dashboard = () => {
   }, {} as Record<string, number>);
   const riskData = Object.keys(riskCounts).map(k => ({ name: k, value: riskCounts[k] }));
 
-
   return (
     <Layout>
       <div className="space-y-8 animate-in fade-in duration-500 pb-12">
         
         {/* Leading vs Lagging Summary Panel (Compliant with Section 12.6) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div className="bg-primary/5 border border-primary/20 rounded-xl p-6 flex flex-col justify-center items-center text-center">
-            <h2 className="text-xl font-bold text-primary mb-2 flex items-center gap-2"><CheckCircle2 className="h-6 w-6"/> Leading Indicators</h2>
-            <p className="text-sm text-muted-foreground mb-4">Proactive measures to prevent incidents</p>
+          {/* LEADING INDICATORS CARD */}
+          <div 
+            onClick={() => setIsLeadingOpen(true)}
+            className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/30 rounded-xl p-6 flex flex-col justify-center items-center text-center cursor-pointer group hover:bg-emerald-100 dark:hover:bg-emerald-900/30 hover:shadow-md transition-all relative overflow-hidden"
+          >
+            <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center text-emerald-700 dark:text-emerald-400 text-xs font-semibold">
+              Full Breakdown <ArrowRight className="w-4 h-4 ml-1" />
+            </div>
+            <h2 className="text-xl font-bold text-emerald-700 dark:text-emerald-400 mb-2 flex items-center gap-2 group-hover:scale-105 transition-transform"><CheckCircle2 className="h-6 w-6"/> Leading Indicators</h2>
+            <p className="text-sm text-emerald-600 dark:text-emerald-500 mb-4">Proactive measures to prevent incidents</p>
             <div className="flex gap-6 mt-2">
               <div>
                 <p className="text-2xl font-bold text-foreground">{totalHazards}</p>
@@ -232,9 +330,16 @@ export const Dashboard = () => {
             </div>
           </div>
           
-          <div className="bg-danger/5 border border-danger/20 rounded-xl p-6 flex flex-col justify-center items-center text-center">
-            <h2 className="text-xl font-bold text-danger mb-2 flex items-center gap-2"><AlertCircle className="h-6 w-6"/> Lagging Indicators</h2>
-            <p className="text-sm text-muted-foreground mb-4">Reactive measures from past incidents</p>
+          {/* LAGGING INDICATORS CARD */}
+          <div 
+            onClick={() => setIsLaggingOpen(true)}
+            className="bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-800/30 rounded-xl p-6 flex flex-col justify-center items-center text-center cursor-pointer group hover:bg-rose-100 dark:hover:bg-rose-900/30 hover:shadow-md transition-all relative overflow-hidden"
+          >
+            <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center text-rose-700 dark:text-rose-400 text-xs font-semibold">
+              Full Breakdown <ArrowRight className="w-4 h-4 ml-1" />
+            </div>
+            <h2 className="text-xl font-bold text-rose-700 dark:text-rose-400 mb-2 flex items-center gap-2 group-hover:scale-105 transition-transform"><AlertCircle className="h-6 w-6"/> Lagging Indicators</h2>
+            <p className="text-sm text-rose-600 dark:text-rose-500 mb-4">Reactive measures from past incidents</p>
             <div className="flex gap-6 mt-2">
               <div>
                 <p className="text-2xl font-bold text-foreground">{totalIncidents}</p>
@@ -273,50 +378,50 @@ export const Dashboard = () => {
           <div className="pt-2">
             {activeTab === 'Incidents' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                <StatCard title="Total Incidents" value={totalIncidents} icon={<AlertTriangle />} color={CHART_COLORS.danger} />
-                <StatCard title="This Month" value={incidentsThisMonth} icon={<Calendar />} color={CHART_COLORS.info} />
-                <StatCard title="Open Incidents" value={openIncidents} icon={<ListTodo />} color={CHART_COLORS.warning} />
-                <StatCard title="Closed Incidents" value={closedIncidents} icon={<CheckCircle2 />} color={CHART_COLORS.success} />
-                <StatCard title="First Aid Cases" value={firstAidCases} icon={<HeartPulse />} color={CHART_COLORS.mutedGreen} />
-                <StatCard title="MTC Cases" value={mtcCases} icon={<Activity />} color={CHART_COLORS.amber} />
-                <StatCard title="LTI Cases" value={ltiCases} icon={<TrendingUp />} color={CHART_COLORS.danger} />
-                <StatCard title="RWC Cases" value={rwcCases} icon={<ListTodo />} color={CHART_COLORS.caramel} />
-                <StatCard title="Fatalities" value={fatalities} icon={<AlertCircle />} color={CHART_COLORS.darkBrown} />
-                <StatCard title="Minor Fire" value={minorFires} icon={<Flame />} color={CHART_COLORS.danger} />
+                <StatCard onClick={() => navigate('/incident-log')} title="Total Incidents" value={totalIncidents} icon={<AlertTriangle />} color={CHART_COLORS.danger} />
+                <StatCard onClick={() => navigate('/incident-log')} title="This Month" value={incidentsThisMonth} icon={<Calendar />} color={CHART_COLORS.info} />
+                <StatCard onClick={() => navigate('/incident-log')} title="Open Incidents" value={openIncidents} icon={<ListTodo />} color={CHART_COLORS.warning} />
+                <StatCard onClick={() => navigate('/incident-log')} title="Closed Incidents" value={closedIncidents} icon={<CheckCircle2 />} color={CHART_COLORS.success} />
+                <StatCard onClick={() => navigate('/incident-log')} title="First Aid Cases" value={firstAidCases} icon={<HeartPulse />} color={CHART_COLORS.mutedGreen} />
+                <StatCard onClick={() => navigate('/incident-log')} title="MTC Cases" value={mtcCases} icon={<Activity />} color={CHART_COLORS.amber} />
+                <StatCard onClick={() => navigate('/incident-log')} title="LTI Cases" value={ltiCases} icon={<TrendingUp />} color={CHART_COLORS.danger} />
+                <StatCard onClick={() => navigate('/incident-log')} title="RWC Cases" value={rwcCases} icon={<ListTodo />} color={CHART_COLORS.caramel} />
+                <StatCard onClick={() => navigate('/incident-log')} title="Fatalities" value={fatalities} icon={<AlertCircle />} color={CHART_COLORS.darkBrown} />
+                <StatCard onClick={() => navigate('/incident-log')} title="Minor Fire" value={minorFires} icon={<Flame />} color={CHART_COLORS.danger} />
               </div>
             )}
 
             {activeTab === 'Hazards' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                <StatCard title="Total Hazards" value={totalHazards} icon={<FileWarning />} color={CHART_COLORS.amber} />
-                <StatCard title="This Month" value={hazardsThisMonth} icon={<Calendar />} color={CHART_COLORS.info} />
-                <StatCard title="Open Hazards" value={openHazards} icon={<ListTodo />} color={CHART_COLORS.warning} />
-                <StatCard title="Closed Hazards" value={closedHazards} icon={<CheckCircle2 />} color={CHART_COLORS.success} />
-                <StatCard title="High/Critical Risk" value={highCriticalHazards} icon={<ShieldAlert />} color={CHART_COLORS.danger} />
+                <StatCard onClick={() => navigate('/hazard-reporting')} title="Total Hazards" value={totalHazards} icon={<FileWarning />} color={CHART_COLORS.amber} />
+                <StatCard onClick={() => navigate('/hazard-reporting')} title="This Month" value={hazardsThisMonth} icon={<Calendar />} color={CHART_COLORS.info} />
+                <StatCard onClick={() => navigate('/hazard-reporting')} title="Open Hazards" value={openHazards} icon={<ListTodo />} color={CHART_COLORS.warning} />
+                <StatCard onClick={() => navigate('/hazard-reporting')} title="Closed Hazards" value={closedHazards} icon={<CheckCircle2 />} color={CHART_COLORS.success} />
+                <StatCard onClick={() => navigate('/hazard-reporting')} title="High/Critical Risk" value={highCriticalHazards} icon={<ShieldAlert />} color={CHART_COLORS.danger} />
               </div>
             )}
 
             {activeTab === 'Near Misses' && (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <StatCard title="Total Near Misses" value={totalNearMisses} icon={<Search />} color={CHART_COLORS.info} />
-                <StatCard title="This Month" value={nearMissesThisMonth} icon={<Calendar />} color={CHART_COLORS.mutedGreen} />
-                <StatCard title="Pending Investigation" value={pendingInvNearMisses} icon={<Clock />} color={CHART_COLORS.warning} />
+                <StatCard onClick={() => navigate('/near-miss')} title="Total Near Misses" value={totalNearMisses} icon={<Search />} color={CHART_COLORS.info} />
+                <StatCard onClick={() => navigate('/near-miss')} title="This Month" value={nearMissesThisMonth} icon={<Calendar />} color={CHART_COLORS.mutedGreen} />
+                <StatCard onClick={() => navigate('/near-miss')} title="Pending Investigation" value={pendingInvNearMisses} icon={<Clock />} color={CHART_COLORS.warning} />
               </div>
             )}
 
             {activeTab === 'Training' && (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <StatCard title="Total Sessions" value={totalTrainingSessions} icon={<BookOpen />} color={CHART_COLORS.success} />
-                <StatCard title="This Month" value={trainingsThisMonth} icon={<Calendar />} color={CHART_COLORS.info} />
-                <StatCard title="Total Manhours" value={totalTrainingManhours} icon={<Users />} color={CHART_COLORS.caramel} />
+                <StatCard onClick={() => navigate('/training-records')} title="Total Sessions" value={totalTrainingSessions} icon={<BookOpen />} color={CHART_COLORS.success} />
+                <StatCard onClick={() => navigate('/training-records')} title="This Month" value={trainingsThisMonth} icon={<Calendar />} color={CHART_COLORS.info} />
+                <StatCard onClick={() => navigate('/training-records')} title="Total Manhours" value={totalTrainingManhours} icon={<Users />} color={CHART_COLORS.caramel} />
               </div>
             )}
 
             {activeTab === 'CAPA' && (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <StatCard title="Open CAPAs" value={totalOpenCapas} icon={<ListTodo />} color={CHART_COLORS.warning} />
-                <StatCard title="Closed CAPAs" value={totalClosedCapas} icon={<CheckCircle2 />} color={CHART_COLORS.success} />
-                <StatCard title="Overdue CAPAs" value={overdueCapas} icon={<Timer />} color={CHART_COLORS.danger} />
+                <StatCard onClick={() => navigate('/action-tracker')} title="Open CAPAs" value={totalOpenCapas} icon={<ListTodo />} color={CHART_COLORS.warning} />
+                <StatCard onClick={() => navigate('/action-tracker')} title="Closed CAPAs" value={totalClosedCapas} icon={<CheckCircle2 />} color={CHART_COLORS.success} />
+                <StatCard onClick={() => navigate('/action-tracker')} title="Overdue CAPAs" value={overdueCapas} icon={<Timer />} color={CHART_COLORS.danger} />
               </div>
             )}
           </div>
@@ -394,54 +499,88 @@ export const Dashboard = () => {
         {/* Row 3: Pie/Donut Charts (3-col grid) */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
-          <div className="bg-card p-5 rounded-xl border border-border card-shadow">
+          <div 
+            onClick={() => navigate('/incident-log')}
+            className="bg-card p-5 rounded-xl border border-border card-shadow cursor-pointer hover:shadow-md hover:scale-[1.02] hover:bg-muted/30 transition-all"
+          >
             <h3 className="text-sm font-semibold text-foreground mb-2 text-center">Incident Categories</h3>
             <div className="h-[220px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={incCatData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value">
-                    {incCatData.map((_, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
-                  </Pie>
-                  <RechartsTooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+              <DonutChartWithLegend data={incCatData} colors={PIE_COLORS} size="sm" />
             </div>
           </div>
 
-          <div className="bg-card p-5 rounded-xl border border-border card-shadow">
+          <div 
+            onClick={() => navigate('/hazard-reporting')}
+            className="bg-card p-5 rounded-xl border border-border card-shadow cursor-pointer hover:shadow-md hover:scale-[1.02] hover:bg-muted/30 transition-all"
+          >
             <h3 className="text-sm font-semibold text-foreground mb-2 text-center">Hazard Risk Ratings</h3>
             <div className="h-[220px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={riskData} cx="50%" cy="50%" innerRadius={0} outerRadius={80} paddingAngle={2} dataKey="value">
-                    {riskData.map((_, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS_RISK[index % PIE_COLORS_RISK.length]} />)}
-                  </Pie>
-                  <RechartsTooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+              <DonutChartWithLegend data={riskData} colors={PIE_COLORS_RISK} size="sm" />
             </div>
           </div>
 
-          <div className="bg-card p-5 rounded-xl border border-border card-shadow">
+          <div 
+            onClick={() => navigate('/action-tracker')}
+            className="bg-card p-5 rounded-xl border border-border card-shadow cursor-pointer hover:shadow-md hover:scale-[1.02] hover:bg-muted/30 transition-all"
+          >
             <h3 className="text-sm font-semibold text-foreground mb-2 text-center">CAPA Status</h3>
             <div className="h-[220px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={capaStatusData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value">
-                    {capaStatusData.map((_, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS_STATUS[index % PIE_COLORS_STATUS.length]} />)}
-                  </Pie>
-                  <RechartsTooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+              <DonutChartWithLegend data={capaStatusData} colors={PIE_COLORS_STATUS} size="sm" />
             </div>
           </div>
 
         </div>
 
       </div>
+
+      {/* Centered Modals for Detail Views */}
+      <CenterModal 
+        isOpen={isLeadingOpen} 
+        onClose={() => setIsLeadingOpen(false)} 
+        title="Leading Indicators Breakdown"
+        description="Detailed view of proactive safety measures"
+      >
+        <div className="mb-8 h-64 bg-background/50 rounded-xl p-4 border border-border">
+          <DonutChartWithLegend 
+            data={leadingMetricsDetail.map(m => ({ 
+              name: m.name, 
+              value: typeof m.value === 'string' && m.value.includes('/') ? parseFloat(m.value.split('/')[0]) : parseFloat(String(m.value)) || 0
+            }))}
+            colors={PIE_COLORS}
+          />
+        </div>
+        <div className="flex flex-wrap justify-center gap-4">
+          {leadingMetricsDetail.map((metric) => (
+            <div key={metric.id} className="flex-1 min-w-[280px] max-w-[400px] bg-card border border-border/50 rounded-lg shadow-sm">
+              <MetricRow metric={metric} />
+            </div>
+          ))}
+        </div>
+      </CenterModal>
+
+      <CenterModal 
+        isOpen={isLaggingOpen} 
+        onClose={() => setIsLaggingOpen(false)} 
+        title="Lagging Indicators Breakdown"
+        description="Detailed view of reactive safety measures"
+      >
+        <div className="mb-8 h-64 bg-background/50 rounded-xl p-4 border border-border">
+          <DonutChartWithLegend 
+            data={laggingMetricsDetail.map(m => ({ 
+              name: m.name, 
+              value: typeof m.value === 'string' && m.value.includes('/') ? parseFloat(m.value.split('/')[0]) : parseFloat(String(m.value)) || 0
+            }))}
+            colors={PIE_COLORS_STATUS}
+          />
+        </div>
+        <div className="flex flex-wrap justify-center gap-4">
+          {laggingMetricsDetail.map((metric) => (
+            <div key={metric.id} className="flex-1 min-w-[280px] max-w-[400px] bg-card border border-border/50 rounded-lg shadow-sm">
+              <MetricRow metric={metric} />
+            </div>
+          ))}
+        </div>
+      </CenterModal>
     </Layout>
   );
 };

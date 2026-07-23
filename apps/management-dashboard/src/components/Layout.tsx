@@ -29,7 +29,7 @@ import { ALL_SECTIONS } from '../config/sectionSchemas';
 import { iconMap } from './iconMap';
 
 const sidebarItems = [
-  { title: "Dashboard", icon: <LayoutDashboard className="h-5 w-5" />, href: "/dashboard" },
+  { title: "Dashboard", icon: <LayoutDashboard className="h-5 w-5" />, href: "/dashboard", color: "#2563EB" },
   ...ALL_SECTIONS.map(s => {
     const IconComponent = iconMap[s.icon];
     return {
@@ -39,9 +39,9 @@ const sidebarItems = [
       color: s.accentColor
     };
   }),
-  { title: "Reports", icon: <FileText className="h-5 w-5" />, href: "/reports" },
-  { title: "Analytics", icon: <BarChart3 className="h-5 w-5" />, href: "/analytics" },
-  { title: "Settings", icon: <Settings className="h-5 w-5" />, href: "/settings" },
+  { title: "Reports", icon: <FileText className="h-5 w-5" />, href: "/reports", color: "#7C3AED" },
+  { title: "Analytics", icon: <BarChart3 className="h-5 w-5" />, href: "/analytics", color: "#059669" },
+  { title: "Settings", icon: <Settings className="h-5 w-5" />, href: "/settings", color: "#475569" },
 ];
 
 export const Layout = ({ children }: { children: React.ReactNode }) => {
@@ -211,8 +211,8 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
           } ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} 
           fixed md:relative z-40 h-[calc(100vh-4rem)] border-r border-border bg-card transition-all duration-300 ease-in-out flex flex-col`}
         >
-          <div className="flex-1 overflow-y-auto py-4">
-            <nav className="space-y-1 px-2">
+          <div className="flex-1 overflow-y-auto py-6 hide-scrollbar">
+            <nav className="space-y-2.5 px-3">
               {sidebarItems.map((item) => {
                 if (item.href === '/reports' && !canViewReports()) return null;
                 
@@ -221,17 +221,20 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                     key={item.href}
                     to={item.href}
                     className={({ isActive }) =>
-                      `flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                      `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all ${
                         isActive
-                          ? 'bg-primary/10 text-primary'
-                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                          ? 'shadow-md brightness-110 scale-[1.02] ring-2 ring-white/20 dark:ring-black/20'
+                          : 'hover:brightness-110 hover:shadow-sm opacity-90 hover:opacity-100 hover:scale-[1.01]'
                       }`
                     }
-                    style={({ isActive }) => isActive && (item as any).color ? { color: (item as any).color, backgroundColor: `${(item as any).color}15` } : {}}
+                    style={{ 
+                      backgroundColor: (item as any).color || '#2563EB',
+                      color: '#ffffff'
+                    }}
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    <span className={collapsed ? 'mx-auto' : ''} style={{ color: (item as any).color }}>{item.icon}</span>
-                    {!collapsed && <span>{item.title}</span>}
+                    <span className={collapsed ? 'mx-auto' : ''}>{item.icon}</span>
+                    {!collapsed && <span className="font-semibold tracking-wide drop-shadow-sm">{item.title}</span>}
                   </NavLink>
                 );
               })}
