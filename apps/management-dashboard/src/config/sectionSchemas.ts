@@ -192,10 +192,46 @@ export const trainingRecordsSchema: SectionConfig = {
   ]
 };
 
+// 6. Audit Management (Phase 2)
+export const auditManagementSchema: SectionConfig = {
+  id: 'audit-management',
+  title: 'Audit Management',
+  path: '/audit-management',
+  accentColor: '#8B5CF6', // Violet
+  icon: 'ClipboardList',
+  columns: [
+    { key: 'title', label: 'Audit Title', type: 'text', required: true },
+    { key: 'department_id', label: 'Department', type: 'select', options: DEPARTMENTS },
+    { key: 'auditor', label: 'Auditor', type: 'text', required: true },
+    { key: 'audit_date', label: 'Audit Date', type: 'date', required: true },
+    { key: 'findings', label: 'Findings / Notes', type: 'textarea' },
+    { key: 'status_id', label: 'Status', type: 'select', options: STATUSES, required: true },
+    { key: 'remarks', label: 'Remarks', type: 'textarea' },
+  ]
+};
+
+// 7. Inspection Records (Phase 2)
+export const inspectionRecordsSchema: SectionConfig = {
+  id: 'inspection-records',
+  title: 'Inspection Records',
+  path: '/inspection-records',
+  accentColor: '#F59E0B', // Amber
+  icon: 'CheckSquare',
+  columns: [
+    { key: 'department_id', label: 'Department', type: 'select', options: DEPARTMENTS },
+    { key: 'inspector', label: 'Inspector', type: 'text', required: true },
+    { key: 'inspection_date', label: 'Inspection Date', type: 'date', required: true },
+    { key: 'observations', label: 'Observations', type: 'textarea' },
+    { key: 'status_id', label: 'Status', type: 'select', options: STATUSES, required: true },
+  ]
+};
+
 export const ALL_SECTIONS = [
   hazardReportingSchema,
   nearMissSchema,
   incidentLogSchema,
   trainingRecordsSchema,
-  actionTrackerSchema
+  actionTrackerSchema,
+  auditManagementSchema,
+  inspectionRecordsSchema
 ];

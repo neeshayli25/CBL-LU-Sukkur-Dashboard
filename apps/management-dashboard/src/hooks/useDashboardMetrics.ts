@@ -9,6 +9,7 @@ export interface DashboardRawData {
   inspections: any[];
   drills: any[];
   legal: any[];
+  audits: any[];
   totalOrgManhours?: number; // Configurable / Inputted elsewhere later
 }
 
@@ -34,8 +35,7 @@ export const useDashboardMetrics = (data: DashboardRawData) => {
       capas = [], 
       training = [], 
       inspections = [], 
-      drills = [], 
-      legal = [], 
+      audits = [],
       totalOrgManhours = 500000 // Temporary mock
     } = data;
 
@@ -56,7 +56,6 @@ export const useDashboardMetrics = (data: DashboardRawData) => {
     const totalTrainingManhours = Math.round(training.reduce((sum, t) => sum + (Number(t.manhours || t.total_manhours) || 0), 0));
     
     // 🚨 No real data sources yet
-    // inspections.length;
     // drills.length;
     // legal.length;
 
@@ -73,7 +72,7 @@ export const useDashboardMetrics = (data: DashboardRawData) => {
       { id: 'unsafe-acts', name: 'Unsafe Acts', value: unsafeActs, unit: 'Count', status: unsafeActs > 0 ? 'warning' : 'success', path: '/hazard-reporting', iconClass: 'text-orange-600', bgClass: 'bg-orange-100' },
       { id: 'hazard-closure', name: 'Hazard Closure', value: hazardClosureRate, unit: '%', target: 100, status: hazardClosureRate >= 80 ? 'success' : 'warning', path: '/hazard-reporting', iconClass: 'text-emerald-600', bgClass: 'bg-emerald-100' },
       { id: 'training-manhours', name: 'HSE Training Manhours', value: totalTrainingManhours, unit: 'Hrs', status: 'success', path: '/training-records', iconClass: 'text-cyan-600', bgClass: 'bg-cyan-100' },
-      { id: 'inspections', name: 'HSE Inspections/Audits', value: 'N/A', unit: 'Module Pending', status: 'neutral', isPendingModule: true },
+      { id: 'inspections', name: 'HSE Inspections/Audits', value: inspections.length + audits.length, unit: 'Count', status: 'success', path: '/audit-management', iconClass: 'text-violet-600', bgClass: 'bg-violet-100' },
       { id: 'incident-capa-closure', name: 'Incident Inv. Actions Closure', value: incidentCapaClosureRate, unit: '%', target: 100, status: incidentCapaClosureRate >= 80 ? 'success' : 'warning', path: '/action-tracker', iconClass: 'text-indigo-600', bgClass: 'bg-indigo-100' },
       { id: 'drills', name: 'Emergency Drills (Int/Ext)', value: 'N/A', unit: 'Module Pending', status: 'neutral', isPendingModule: true },
       { id: 'capa-closure', name: 'Action Plans Closure Tracker', value: capaClosureRate, unit: '%', target: 100, status: capaClosureRate >= 80 ? 'success' : 'warning', path: '/action-tracker', iconClass: 'text-violet-600', bgClass: 'bg-violet-100' },

@@ -4,15 +4,6 @@ import { useAuth, usePermissions } from '@cbl/auth';
 import { useFilters } from '../context/FilterContext';
 import {
   LayoutDashboard,
-  ClipboardList,
-  AlertTriangle,
-  Tags,
-  Building2,
-  AlertCircle,
-  Activity,
-  Target,
-  CheckSquare,
-  Calendar,
   FileText,
   BarChart3,
   Settings,

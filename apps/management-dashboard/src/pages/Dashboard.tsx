@@ -102,7 +102,7 @@ export const Dashboard = () => {
   const [training, setTraining] = useState<any[]>([]);
 
   const [rawData, setRawData] = useState<DashboardRawData>({
-    hazards: [], nearMisses: [], incidents: [], capas: [], training: [], inspections: [], drills: [], legal: []
+    hazards: [], nearMisses: [], incidents: [], capas: [], training: [], inspections: [], drills: [], legal: [], audits: []
   });
 
   const [isLeadingOpen, setIsLeadingOpen] = useState(false);
@@ -112,7 +112,7 @@ export const Dashboard = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [hRes, nmRes, incRes, capRes, trRes, insRes, drRes, legRes] = await Promise.all([
+        const [hRes, nmRes, incRes, capRes, trRes, insRes, drRes, legRes, audRes] = await Promise.all([
           moduleService.getAll('hazard-reporting'),
           moduleService.getAll('near-miss'),
           moduleService.getAll('incident-log'),
@@ -120,7 +120,8 @@ export const Dashboard = () => {
           moduleService.getAll('training-records'),
           moduleService.getAll('inspection-records'),
           moduleService.getAll('emergency-drills'),
-          moduleService.getAll('legal-compliance')
+          moduleService.getAll('legal-compliance'),
+          moduleService.getAll('audit-management')
         ]);
 
         const applyFilters = (data: any[]) => {
@@ -161,6 +162,7 @@ export const Dashboard = () => {
           capas: applyFilters(capRes.data),
           training: applyFilters(trRes.data),
           inspections: applyFilters(insRes.data),
+          audits: applyFilters(audRes.data),
           drills: applyFilters(drRes.data),
           legal: applyFilters(legRes.data),
           totalOrgManhours: 500000 // Placeholder until setting is available

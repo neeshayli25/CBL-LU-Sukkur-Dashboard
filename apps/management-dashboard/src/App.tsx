@@ -10,7 +10,6 @@ import { DataEntrySection } from './components/DataEntrySection';
 import { ALL_SECTIONS } from './config/sectionSchemas';
 import { FilterProvider } from './context/FilterContext';
 import { ThemeProvider } from './context/ThemeContext';
-import { Layout } from './components/Layout';
 import { Card, CardHeader, CardTitle, CardContent, Button } from '@cbl/ui';
 
 

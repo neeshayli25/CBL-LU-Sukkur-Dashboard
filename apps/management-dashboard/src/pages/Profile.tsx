@@ -1,4 +1,3 @@
-import React from 'react';
 import { Layout } from '../components/Layout';
 import { useAuth } from '@cbl/auth';
 import { User, Mail, Shield, Building2, BadgeCheck } from 'lucide-react';

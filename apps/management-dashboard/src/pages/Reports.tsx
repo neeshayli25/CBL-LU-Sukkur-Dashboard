@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { usePermissions } from '@cbl/auth';
 import { FileText, Download, Filter, Printer, Table as TableIcon } from 'lucide-react';
 import { DEPARTMENTS, STATUSES, RISK_RATINGS, INCIDENT_CATEGORIES } from '../config/constants';

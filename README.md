@@ -14,9 +14,61 @@ This is the **frontend monorepo** for the CBL LU Power Plant Management System. 
 
 The dashboard consolidates what used to be two separate views (employee + management) into a **single, unified management dashboard**, with data automatically scoped per logged-in user's department once real authentication is live.
 
-While the backend (built separately by the team — see [Backend](#-backend) below) is being finalized, the frontend runs against **mock data and `localStorage`** so UI/UX work isn't blocked.
+While the backend (built separately by the team) is being finalized, the frontend runs against **mock data and `localStorage`** so UI/UX work isn't blocked.
 
-### Tech Stack
+---
+
+## 🏗️ What We Are Building
+
+The goal is to deliver a comprehensive, end-to-end HSE (Health, Safety, and Environment) Management System for the LU Sukkur Plant. This involves digitizing manual records, providing real-time data visualizations, tracking incident closures, managing audits/inspections, and enforcing accountability through an automated Action Tracker (CAPA).
+
+---
+
+## ✅ What Has Been Built (Accomplished)
+
+The frontend foundation is complete, highly modular, and aesthetically polished. The following features and phases have been successfully implemented:
+
+### Phase 1 & Phase 2 Modules
+A single, config-driven component (`DataEntrySection.tsx`) powers **seven independent modules**, each with its own form, editable table, inline delete/save, and CSV export. 
+1. ⚠️ **Hazard Reporting**
+2. 🎯 **Near Miss**
+3. 📋 **Incident Log**
+4. ✅ **Action Tracker (CAPA)**
+5. 📚 **Training Records** (Departmental & Activity)
+6. 📝 **Audit Management** *(Phase 2)*
+7. 🔍 **Inspection Records** *(Phase 2)*
+
+### Dynamic Dashboard & KPI Visualizations
+- **Main KPI Hub:** Real-time metrics counting total hazards, incidents, training manhours, audits, and inspections.
+- **Leading & Lagging Indicators:** Detailed modals displaying metric breakdowns (e.g., Fatalities, LTI, LTIR, TRIR, Hazard Spotting) equipped with deep-links clicking through directly to their respective reporting modules.
+- **Charts:** Donut charts for Hazard Risk Ratings and Incident Categories, featuring customized, grid-aligned legends perfectly matching design mockups.
+- **Filtering:** Global filters across the dashboard and tables allowing users to slice data by Year, Department, and custom Date Ranges.
+
+### UI/UX & Theming
+- **LU Brand Palette:** Full integration of Maroon, Amber, Cream, and Caramel as CSS variables (`src/index.css`).
+- **Dark/Light Mode:** Complete theme toggle support applied consistently across the sidebar, cards, charts, and tables.
+- **Responsive Layout:** Sidebar navigation with custom module accent colors and mobile-friendly collapsible menus.
+
+### Authentication (Microsoft SSO - UI Ready)
+- Two-step flow via Microsoft Entra ID popup login is integrated using `@azure/msal-react`.
+- *Note:* Currently utilizing a **Bypass Mode** (`BYPASS_AUTH = true`) to allow seamless UI testing while the backend finalizes connectivity.
+
+---
+
+## ⏳ What Is Remaining (Roadmap)
+
+The UI is robust and ready. The remaining tasks revolve around integrating with the live backend database and removing mock/localStorage dependencies:
+
+- [ ] **Disable Auth Bypass:** Resolve backend CORS/connectivity issues and wire up the real `/auth/verify-email` endpoint to validate roles and department scopes.
+- [ ] **Live Backend CRUD:** Replace all `localStorage`-backed data entry modules (Hazards, Incidents, Audits, etc.) with real REST/GraphQL API calls.
+- [ ] **Live Dashboard Data:** Connect KPI cards, charts, and tables to live SQL data feeds instead of local mock data.
+- [ ] **RBAC Implementation:** Ensure frontend views strictly adhere to the role-based access control (RBAC) permissions provided by the backend JWT.
+- [ ] **Production Deployment:** Bundle and deploy the application via CI/CD pipelines to the production server.
+
+---
+
+## 💻 Tech Stack
+
 | Layer | Technology |
 |---|---|
 | Framework | React 18 + Vite |
@@ -24,53 +76,15 @@ While the backend (built separately by the team — see [Backend](#-backend) bel
 | Icons | `lucide-react` |
 | Charts | `recharts` |
 | Auth | Microsoft Authentication Library (`@azure/msal-react`) |
-| Architecture | Turborepo Monorepo (`apps/management-dashboard`, `packages/auth`, `packages/ui`, etc.) |
+| Architecture | Turborepo Monorepo (`apps/management-dashboard`, `packages/auth`, `packages/ui`) |
 
 ---
 
-## 🖥️ Features
+## 🔌 Expected Backend API Contract
 
-### Core Dashboard Pages
-KPI cards, charts, and filterable tables (by Year, Department, Status) across:
-- Dashboard (main KPI hub)
-- Observations · Status Tracker · Analytics
-- Audit Plan · Categories · Departments · Priority · Root Cause
-- Actions / CAPA · Due Dates · Reports · Settings
+The backend is a separate service: **Node.js + Express + MySQL (Sequelize)**, featuring JWT auth, RBAC, Redis, and Swagger docs. 
 
-### Schema-Driven HSE Data Entry (6 modules)
-A single, config-driven component (`DataEntrySection.tsx`) powers six independent logs, each with its own form, editable table, inline delete/save, and CSV export — no per-section rebuilding required:
-1. Hazard Reporting
-2. Near Miss
-3. Incident Log
-4. Action Tracker
-5. Departmental Training
-6. Activity Training
-
-Column definitions and per-section accent colors live in `src/config/sectionSchemas.ts`, driven off real Excel sheet structures. Entries currently persist to `localStorage` (e.g. `cbl_data_hazard-reporting`) until backend CRUD endpoints are wired in.
-
-### Theming
-- Full LU brand palette (Maroon / Amber / Cream / Caramel) as CSS variables in `apps/management-dashboard/src/index.css`
-- Complete Dark/Light mode via `ThemeProvider` — applied consistently across sidebar, cards, charts, and tables
-- Distinct accent colors per HSE module for quick visual identification
-
-### Authentication (Microsoft SSO)
-Two-step flow: Microsoft Entra ID popup login → backend verification of the user's email and role (see [API Contract](#-expected-backend-api-contract)).
-
-> **⚠️ Current Bypass Mode:** The backend is still stabilizing CORS/connectivity, so real auth is temporarily bypassed via a flag in `packages/auth/src/hooks/useAuth.ts`:
-> ```ts
-> const BYPASS_AUTH = true;
-> ```
-> While `true`, clicking "Sign in with Microsoft" logs in as a mock `Plant Manager (Bypass)` and routes straight to the dashboard. Set to `false` once the backend's `/auth/verify-email` endpoint is confirmed reachable.
-
----
-
-## 🔌 Backend
-
-The backend is a separate, production-grade service: **Node.js + Express + MySQL (Sequelize)**, with JWT auth, RBAC, Redis/BullMQ, Socket.IO, Swagger docs, audit logging, and dedicated HSE modules (Hazards, Near Misses, Incidents, Training, Audits, Inspections, Corrective Actions) matching this frontend's data entry sections.
-
-Backend repo: *link here once separated / or note if in the same monorepo*
-
-**Expected API contract** the frontend integrates against:
+**Authentication API contract** the frontend expects:
 
 **`POST /auth/verify-email`**
 ```json
@@ -81,25 +95,23 @@ Backend repo: *link here once separated / or note if in the same monorepo*
 {
   "success": true,
   "message": "User authorized",
-  "data": { "id": 1, "name": "Ali Raza", "email": "ali@example.com", "role": "admin" }
+  "data": { "id": 1, "name": "Ali Raza", "email": "ali@example.com", "role": "admin", "department_id": "Production" }
 }
 
 // Failure (404)
 { "success": false, "message": "User not authorized" }
 ```
 
-Full backend API reference (HSE modules, RBAC, roles, notifications, etc.) is documented via Swagger at `http://localhost:5000/api/docs` when running locally.
-
 ---
 
-## 🛠️ Setup
+## 🛠️ Setup Instructions
 
 1. Clone the repository.
 2. Install dependencies from the root:
    ```bash
    npm install
    ```
-3. Create `.env` in `apps/management-dashboard/`:
+3. Create a `.env` file in `apps/management-dashboard/`:
    ```env
    VITE_MSAL_CLIENT_ID=your_client_id
    VITE_MSAL_TENANT_ID=your_tenant_id
@@ -111,28 +123,19 @@ Full backend API reference (HSE modules, RBAC, roles, notifications, etc.) is do
    ```
 5. Open `http://localhost:5173`.
 
-> To run against the real backend, ensure the API server is running (see backend repo), confirm CORS allows `localhost:5173` as an origin, then set `BYPASS_AUTH = false` in `packages/auth/src/hooks/useAuth.ts`.
-
----
-
-## 🗺️ Roadmap
-
-- [ ] Resolve backend CORS/connectivity and disable auth bypass
-- [ ] Replace `localStorage`-backed HSE data entry with live backend CRUD
-- [ ] Wire department-scoped data filtering to the real user role/department returned by `/auth/verify-email`
-- [ ] Connect KPI cards, charts, and tables to live SQL data instead of mock data
-- [ ] Production deployment
+> **Note:** To run against the real backend, ensure the API server is running, confirm CORS allows `localhost:5173`, and set `BYPASS_AUTH = false` in `packages/auth/src/hooks/useAuth.ts`.
 
 ---
 
 ## 📁 Project Structure
 
-```
+```text
 apps/
-  management-dashboard/      # Main React/Vite app
+  management-dashboard/      # Main React/Vite application
 packages/
-  auth/                      # MSAL + auth hooks (useAuth.ts, BYPASS_AUTH flag)
-  ui/                        # Shared UI components
+  auth/                      # MSAL setup + authentication hooks
+  ui/                        # Shared UI components across the monorepo
+  eslint-config/             # Shared linting rules
 ```
 
 ---

@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { Layout } from '../components/Layout';
-import { useAuth } from '@cbl/auth';
+import { useAuth, useAuthStore } from '@cbl/auth';
 import { useTheme } from '../context/ThemeContext';
 import { Settings as SettingsIcon, User, Bell, Moon, Sun, MonitorSmartphone, ShieldAlert, Database } from 'lucide-react';
-import { useAuthStore, usePermissions } from '@cbl/auth';
 import { DEPARTMENTS } from '../config/constants';
 
 export const Settings = () => {
