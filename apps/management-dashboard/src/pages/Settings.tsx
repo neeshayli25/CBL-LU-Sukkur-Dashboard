@@ -143,6 +143,7 @@ export const Settings = () => {
               <button className="mt-2 bg-muted hover:bg-muted/80 text-foreground px-3 py-1.5 rounded-md text-xs font-medium transition-colors">
                 + Add Department
               </button>
+            </div>
             <div className="space-y-4 border border-border rounded-md p-4 mt-4">
               <h3 className="font-medium text-foreground flex items-center justify-between">
                 Plants
