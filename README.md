@@ -80,11 +80,38 @@ The UI is robust and ready. The remaining tasks revolve around integrating with 
 
 ---
 
-## 🔌 Expected Backend API Contract
+## 🔌 Expected Backend API Contract & Requirements (For Backend Devs)
 
-The backend is a separate service: **Node.js + Express + MySQL (Sequelize)**, featuring JWT auth, RBAC, Redis, and Swagger docs. 
+The frontend is currently using a mock API service that intercepts CRUD operations and saves them to `localStorage`. To fully wire the frontend, the backend must provide RESTful endpoints for the **7 core modules** listed below.
 
-**Authentication API contract** the frontend expects:
+### 1. Standard CRUD Endpoints per Module
+For each module (e.g., `hazard-reporting`), the frontend's `moduleService` expects the following standard endpoints:
+- `GET /api/v1/:moduleName` (Fetch all records)
+- `POST /api/v1/:moduleName` (Create new record)
+- `PUT /api/v1/:moduleName/:id` (Update record)
+- `DELETE /api/v1/:moduleName/:id` (Delete record)
+
+### 2. Module Database Schemas Required
+Your database tables must support the exact data fields configured in the frontend schemas (`src/config/sectionSchemas.ts`). Below is the mapping of modules to expected fields:
+
+1. **Hazard Reporting** (`/hazard-reporting`)
+   - `date`, `department_id`, `originator`, `location`, `description`, `hazard_category_id`, `responsible_person`, `risk_rating_id`, `unsafe_type`, `status_id`, `remarks`
+2. **Near Miss** (`/near-miss`)
+   - `date`, `department_id`, `reported_by`, `designation`, `affected_person`, `affected_designation`, `time`, `location`, `details`, `preventive_action`, `responsible_person`, `investigation_required`, `reported_in_hazard`, `status_id`, `remarks`
+3. **Incident Log** (`/incident-log`)
+   - `date`, `description`, `shift`, `area_manager`, `gender`, `location`, `department_id`, `incident_category_id`, `root_cause_id`, `action_items`, `responsible_person`, `risk_rating_id`, `timeline`, `status_id`
+4. **Actions / CAPA** (`/action-tracker`)
+   - `linked_id`, `action`, `assigned_to`, `due_date`, `completion_date`, `status_id`, `remarks`
+5. **Training Records** (`/training-records`)
+   - `date`, `department_id`, `trainer`, `venue`, `topic`, `participants`, `duration_minutes`, `status_id` *(Note: `manhours` is computed on the frontend based on participants × duration)*
+6. **Audit Management** (`/audit-management`)
+   - `title`, `department_id`, `auditor`, `audit_date`, `findings`, `status_id`, `remarks`
+7. **Inspection Records** (`/inspection-records`)
+   - `department_id`, `inspector`, `inspection_date`, `observations`, `status_id`
+
+### 3. Authentication & RBAC API Contract
+
+The frontend relies on Microsoft SSO via popup, which will yield an email. It then expects to verify that email with your backend to retrieve role and scope (department) permissions.
 
 **`POST /auth/verify-email`**
 ```json
@@ -95,7 +122,13 @@ The backend is a separate service: **Node.js + Express + MySQL (Sequelize)**, fe
 {
   "success": true,
   "message": "User authorized",
-  "data": { "id": 1, "name": "Ali Raza", "email": "ali@example.com", "role": "admin", "department_id": "Production" }
+  "data": { 
+    "id": 1, 
+    "name": "Ali Raza", 
+    "email": "ali@example.com", 
+    "role": "admin", 
+    "department_id": "Production" // Important for scoping dashboard data
+  }
 }
 
 // Failure (404)

@@ -1,98 +1,54 @@
+import { apiClient } from '@cbl/api';
+
 export interface ApiResponse<T> {
   success: boolean;
   message: string;
   data: T;
+  meta?: any;
 }
 
-// Helper to simulate network latency
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const schemaToEndpoint: Record<string, string> = {
+  'hazard-reporting': '/hazards',
+  'near-miss': '/near-misses',
+  'incident-log': '/incidents',
+  'training-records': '/training',
+  'action-tracker': '/corrective-actions',
+  'audit-management': '/hse-audits',
+  'inspection-records': '/inspections',
+};
+
+const getEndpoint = (schemaId: string): string => {
+  const endpoint = schemaToEndpoint[schemaId];
+  if (!endpoint) {
+    throw new Error(`No endpoint mapped for schemaId: ${schemaId}`);
+  }
+  return endpoint;
+};
 
 export const moduleService = {
-  // Replace with real backend URL later: const API_URL = import.meta.env.VITE_API_URL;
-  
-  getAll: async (schemaId: string): Promise<ApiResponse<any[]>> => {
-    await delay(300); // Simulate network
-    const key = `cbl_data_${schemaId}`;
-    const raw = localStorage.getItem(key);
-    const data = raw ? JSON.parse(raw) : [];
-    
-    return {
-      success: true,
-      message: `${schemaId} records fetched successfully`,
-      data
-    };
+  getAll: async (schemaId: string, params?: any): Promise<ApiResponse<any[]>> => {
+    const endpoint = getEndpoint(schemaId);
+    const response = await apiClient.get(endpoint, { params });
+    // Assuming backend returns { success: true, data: [...], message: "..." }
+    // which aligns with ApiResponse utility from the backend.
+    return response.data;
   },
 
   create: async (schemaId: string, record: any): Promise<ApiResponse<any>> => {
-    await delay(400); // Simulate network
-    const key = `cbl_data_${schemaId}`;
-    const raw = localStorage.getItem(key);
-    const data = raw ? JSON.parse(raw) : [];
-    
-    const newRecord = {
-      ...record,
-      id: crypto.randomUUID(),
-      s_no: `S-${data.length + 1001}`
-    };
-    
-    // Default status initialization and logging
-    if (newRecord.status_id) {
-      newRecord.statusHistory = [{
-        user: "System (Auto)",
-        oldStatus: "None",
-        newStatus: newRecord.status_id,
-        timestamp: new Date().toISOString()
-      }];
-    }
-    
-    data.push(newRecord);
-    localStorage.setItem(key, JSON.stringify(data));
-    
-    return {
-      success: true,
-      message: `Record created successfully in ${schemaId}`,
-      data: newRecord
-    };
+    const endpoint = getEndpoint(schemaId);
+    const response = await apiClient.post(endpoint, record);
+    return response.data;
   },
 
   update: async (schemaId: string, id: string, updates: any): Promise<ApiResponse<any>> => {
-    await delay(400); // Simulate network
-    const key = `cbl_data_${schemaId}`;
-    const raw = localStorage.getItem(key);
-    const data = raw ? JSON.parse(raw) : [];
-    
-    const index = data.findIndex((item: any) => item.id === id);
-    if (index === -1) {
-      return {
-        success: false,
-        message: `Record not found`,
-        data: null
-      };
-    }
-    
-    data[index] = { ...data[index], ...updates };
-    localStorage.setItem(key, JSON.stringify(data));
-    
-    return {
-      success: true,
-      message: `Record updated successfully`,
-      data: data[index]
-    };
+    const endpoint = getEndpoint(schemaId);
+    const response = await apiClient.put(`${endpoint}/${id}`, updates);
+    return response.data;
   },
 
   delete: async (schemaId: string, id: string): Promise<ApiResponse<null>> => {
-    await delay(400); // Simulate network
-    const key = `cbl_data_${schemaId}`;
-    const raw = localStorage.getItem(key);
-    const data = raw ? JSON.parse(raw) : [];
-    
-    const newData = data.filter((item: any) => item.id !== id);
-    localStorage.setItem(key, JSON.stringify(newData));
-    
-    return {
-      success: true,
-      message: `Record deleted successfully`,
-      data: null
-    };
+    const endpoint = getEndpoint(schemaId);
+    const response = await apiClient.delete(`${endpoint}/${id}`);
+    return response.data;
   }
 };
