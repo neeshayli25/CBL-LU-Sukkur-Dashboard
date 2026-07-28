@@ -4,8 +4,9 @@
 
 @layer base {
   :root {
-    --background: #FAF6EF; /* lu-bg */
-    --foreground: #2B1B17; /* lu-text */
+    --background: #FAF6EF;
+    --background-alt: #F4EBE0;
+    --foreground: #2B1B17;
     
     --card: #FFFFFF;
     --card-foreground: #2B1B17;
@@ -13,56 +14,57 @@
     --popover: #FFFFFF;
     --popover-foreground: #2B1B17;
     
-    --primary: #8C1D2B; /* lu-primary */
+    --primary: #8C1D2B;
     --primary-foreground: #FFFFFF;
     
-    --secondary: #D9A441; /* lu-secondary */
+    --secondary: #D9A441;
     --secondary-foreground: #FFFFFF;
     
     --muted: #F4EFE6;
-    --muted-foreground: #6E5A4E; /* lu-text-muted */
+    --muted-foreground: #6E5A4E;
     
-    --accent: #C46A2F; /* lu-tertiary */
+    --accent: #C46A2F;
     --accent-foreground: #FFFFFF;
     
-    --destructive: #8C1D2B; /* lu-danger */
+    --destructive: #8C1D2B;
     --destructive-foreground: #FFFFFF;
     
     --border: #E5DFD3;
     --input: #E5DFD3;
     --ring: #D9A441;
     
-    --radius: 0.5rem;
+    --radius: 0.75rem; /* Slightly softer corners */
   }
   
   .dark {
-    --background: #1E1A18; /* Warm Charcoal */
-    --foreground: #FAF6EF; /* Cream Text */
+    --background: #151210; /* Deeper, sleeker dark mode */
+    --background-alt: #1E1A18;
+    --foreground: #FAF6EF;
     
-    --card: #2A2220; /* Dark Brown/Grey */
+    --card: #1E1A18; 
     --card-foreground: #FAF6EF;
     
-    --popover: #2A2220;
+    --popover: #1E1A18;
     --popover-foreground: #FAF6EF;
     
-    --primary: #A7283B; /* Slightly brighter maroon for contrast */
+    --primary: #C8324A; /* Brighter accent for dark mode */
     --primary-foreground: #FFFFFF;
     
-    --secondary: #E5B455; /* Brighter amber for contrast */
-    --secondary-foreground: #1E1A18;
+    --secondary: #F0C46B;
+    --secondary-foreground: #151210;
     
-    --muted: #3B302E;
-    --muted-foreground: #A89891;
+    --muted: #2A2421;
+    --muted-foreground: #B5A8A1;
     
-    --accent: #D2793D; 
+    --accent: #E28C59;
     --accent-foreground: #FFFFFF;
     
-    --destructive: #A7283B;
+    --destructive: #C8324A;
     --destructive-foreground: #FFFFFF;
     
-    --border: #3B302E;
-    --input: #3B302E;
-    --ring: #E5B455;
+    --border: #2A2421;
+    --input: #2A2421;
+    --ring: #F0C46B;
   }
 }
 
@@ -71,24 +73,42 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply text-foreground font-sans bg-fixed;
+    /* Soft mesh gradient background */
+    background: linear-gradient(135deg, var(--background) 0%, var(--background-alt) 100%);
     font-family: 'Inter', 'Poppins', sans-serif;
   }
 }
 
-/* Custom Utilities for LU Theme */
+/* Custom Utilities for Premium Theme */
 @layer utilities {
   .glass {
-    @apply bg-white/70 backdrop-blur-md border border-white/20;
+    @apply bg-card/60 backdrop-blur-xl border border-border/50;
   }
+  
+  .glass-panel {
+    @apply bg-background/70 backdrop-blur-2xl border border-white/10 dark:border-white/5;
+  }
+
   .card-shadow {
-    box-shadow: 0 4px 6px -1px rgba(140, 29, 43, 0.05), 0 2px 4px -1px rgba(140, 29, 43, 0.03);
+    /* Diffuse, layered, buttery smooth shadow */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 
+                0 12px 16px -4px rgba(0, 0, 0, 0.03),
+                0 24px 32px -8px rgba(0, 0, 0, 0.02);
+  }
+  
+  .dark .card-shadow {
+    box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.2);
+  }
+
+  .text-glow {
+    text-shadow: 0 0 12px currentColor;
   }
 }
 
 /* Print Utilities for Reports */
 @media print {
-  .print-hide, header, aside, .md\\:hidden {
+  .print-hide, header, aside, .md\:hidden {
     display: none !important;
   }
   
@@ -97,7 +117,7 @@
     color: black !important;
   }
   
-  .glass, .card-shadow, .bg-card, .glass-panel {
+  .glass, .glass-panel, .card-shadow, .bg-card {
     box-shadow: none !important;
     border: 1px solid #ccc !important;
     background: transparent !important;

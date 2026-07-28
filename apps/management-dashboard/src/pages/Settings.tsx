@@ -4,7 +4,7 @@ import { useAuth, useAuthStore } from '@cbl/auth';
 import { useTheme } from '../context/ThemeContext';
 import { Settings as SettingsIcon, User, Bell, Moon, Sun, MonitorSmartphone, ShieldAlert, Database } from 'lucide-react';
 import { DEPARTMENTS } from '../config/constants';
-import { plantService, Plant } from '../services/api/plantService';
+import { plantService, type Plant } from '../services/api/plantService';
 import { useEffect } from 'react';
 
 export const Settings = () => {
