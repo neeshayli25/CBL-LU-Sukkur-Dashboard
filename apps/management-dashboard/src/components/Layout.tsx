@@ -1,357 +1,469 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth, usePermissions } from '@cbl/auth';
-import { useFilters } from '../context/FilterContext';
 import {
-  LayoutDashboard,
-  FileText,
-  BarChart3,
-  Settings,
-  LogOut,
-  User,
-  ChevronLeft,
-  ChevronRight,
-  Menu,
-  Bell,
-  ChevronDown,
-  UserCircle,
-  Settings as SettingsIcon,
-  HelpCircle
+  LayoutDashboard, FileText, BarChart3, Settings, LogOut,
+  ChevronRight, ChevronLeft, Menu, Bell, ChevronDown, X,
+  UserCircle, Settings as SettingsIcon, HelpCircle,
+  AlertTriangle, Target, FileWarning, CheckSquare, ClipboardList,
+  Search as SearchIcon, Users, ExternalLink
 } from 'lucide-react';
 
-import { DEPARTMENTS } from '../config/constants';
-import { ALL_SECTIONS } from '../config/sectionSchemas';
-import { iconMap } from './iconMap';
+// ============================================================
+// Layout — SAP Fiori Shell Layout
+// Dark 48px shell header + white grouped sidebar + grey workspace
+// Filters moved OUT of shell to page-level FilterBar component
+// ============================================================
 
-const sidebarItems = [
-  { title: "Dashboard", icon: <LayoutDashboard className="h-5 w-5" />, href: "/dashboard", color: "#2563EB" },
-  ...ALL_SECTIONS.map(s => {
-    const IconComponent = iconMap[s.icon];
-    return {
-      title: s.title,
-      icon: IconComponent ? <IconComponent className="h-5 w-5" /> : null,
-      href: s.path,
-      color: s.accentColor
-    };
-  }),
-  { title: "Reports", icon: <FileText className="h-5 w-5" />, href: "/reports", color: "#7C3AED" },
-  { title: "Analytics", icon: <BarChart3 className="h-5 w-5" />, href: "/analytics", color: "#059669" },
-  { title: "Settings", icon: <Settings className="h-5 w-5" />, href: "/settings", color: "#475569" },
+// Nav group structure — grouped like SAP Fiori left navigation
+const NAV_GROUPS = [
+  {
+    label: 'OVERVIEW',
+    items: [
+      { title: 'Dashboard',          href: '/dashboard',          Icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: 'HSE MONITORING',
+    items: [
+      { title: 'Hazard Reporting',   href: '/hazard-reporting',   Icon: AlertTriangle },
+      { title: 'Near Miss',          href: '/near-miss',          Icon: Target },
+      { title: 'Incident Log',       href: '/incident-log',       Icon: FileWarning },
+    ],
+  },
+  {
+    label: 'COMPLIANCE',
+    items: [
+      { title: 'CAPA / Actions',     href: '/action-tracker',     Icon: CheckSquare },
+      { title: 'Audit Management',   href: '/audit-management',   Icon: ClipboardList },
+      { title: 'Inspection Records', href: '/inspection-records', Icon: ClipboardList },
+    ],
+  },
+  {
+    label: 'TRAINING',
+    items: [
+      { title: 'Training Records',   href: '/training-records',   Icon: Users },
+    ],
+  },
+  {
+    label: 'REPORTING',
+    items: [
+      { title: 'Reports',            href: '/reports',            Icon: FileText },
+      { title: 'Analytics',          href: '/analytics',          Icon: BarChart3 },
+    ],
+  },
+  {
+    label: 'ADMINISTRATION',
+    items: [
+      { title: 'Settings',           href: '/settings',           Icon: Settings },
+    ],
+  },
+] as const;
+
+const MOCK_NOTIFICATIONS = [
+  { id: 1, title: 'CAPA #42 is Overdue', detail: 'Assigned to Ahmad — Due 3 days ago', time: '2h ago', type: 'danger' as const, link: '/action-tracker' },
+  { id: 2, title: 'High-Priority Hazard Reported', detail: 'Electrical hazard in PROD', time: '5h ago', type: 'warning' as const, link: '/hazard-reporting' },
+  { id: 3, title: 'Monthly Report Ready', detail: 'July 2026 Incident Summary', time: '1d ago', type: 'info' as const, link: '/reports' },
 ];
 
-const NavLinkIndicator = ({ isActive }: { isActive: boolean }) => {
-  if (!isActive) return null;
-  return (
-    <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-md transition-all duration-300" />
-  );
+const NOTIF_TYPE = {
+  danger:  { dot: '#EF4444', line: '#FEE2E2' },
+  warning: { dot: '#F59E0B', line: '#FEF9C3' },
+  info:    { dot: '#3B82F6', line: '#DBEAFE' },
+};
+
+// Helper: resolve active state robustly
+const getIsActive = (pathname: string, href: string): boolean => {
+  if (href === '/dashboard') return pathname === '/dashboard';
+  return pathname === href || pathname.startsWith(href + '/');
+};
+
+// Helper: get user initials
+const getInitials = (name?: string): string => {
+  if (!name) return 'U';
+  return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
 };
 
 export const Layout = ({ children }: { children: React.ReactNode }) => {
-  const [collapsed, setCollapsed] = useState(false);
-  const [sidebarHovered, setSidebarHovered] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [collapsed,         setCollapsed]         = useState(false);
+  const [mobileMenuOpen,    setMobileMenuOpen]     = useState(false);
+  const [showNotifications, setShowNotifications]  = useState(false);
+  const [userMenuOpen,      setUserMenuOpen]       = useState(false);
 
-  const mockNotifications = [
-    { id: 1, text: "CAPA #42 is Overdue", time: "2 hours ago", type: "warning" },
-    { id: 2, text: "New High-Priority Hazard Reported", time: "5 hours ago", type: "danger" },
-    { id: 3, text: "Monthly Incident Summary Ready", time: "1 day ago", type: "info" }
-  ];
+  const { logout, user }      = useAuth();
+  const { canViewReports }    = usePermissions();
+  const navigate              = useNavigate();
+  const location              = useLocation();
 
-  const { logout, user } = useAuth();
-  const { canViewReports, isDepartmentRestricted } = usePermissions();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { filters, setFilter } = useFilters();
+  const handleLogout = () => { logout(); navigate('/login'); };
 
-  const isRestrictedDept = isDepartmentRestricted();
+  const sidebarWidth = collapsed ? 48 : 240;
+  const initials     = getInitials(user?.name);
 
-  // Effect to force department filter if restricted
-  React.useEffect(() => {
-    if (isRestrictedDept && user?.department_id) {
-      setFilter('department', user.department_id);
-    }
-  }, [isRestrictedDept, user?.department_id, setFilter]);
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  // Close all overlays when clicking outside
+  const closeOverlays = () => {
+    setShowNotifications(false);
+    setUserMenuOpen(false);
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground">
-      {/* Top Navigation */}
-      <header className="sticky top-0 z-50 w-full border-b border-white/10 dark:border-white/5 glass-panel shadow-sm">
-        <div className="flex h-16 items-center px-4 md:px-6">
-          <div className="flex items-center gap-2 md:gap-4">
+    <div className="min-h-screen flex flex-col bg-[#F5F5F5]" onClick={closeOverlays}>
+
+      {/* ================================================================
+          SHELL HEADER — 48px dark bar (SAP Fiori standard)
+          ================================================================ */}
+      <header
+        className="fixed top-0 left-0 right-0 z-50 h-12 flex items-center border-b border-white/10"
+        style={{ backgroundColor: '#1A1818' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Logo + App Identity */}
+        <div
+          className="flex items-center h-full border-r border-white/10 px-4 shrink-0 overflow-hidden"
+          style={{ width: sidebarWidth, transition: 'width 0.2s ease' }}
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <img
+              src="/logo-dark.svg"
+              alt="CBL"
+              className="h-8 w-auto shrink-0"
+            />
+            {!collapsed && (
+              <div className="min-w-0 overflow-hidden">
+                <p className="text-white text-[12px] font-semibold leading-tight truncate">
+                  HSE Management
+                </p>
+                <p className="leading-tight truncate" style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10 }}>
+                  CBL · LU Sukkur Plant
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Breadcrumb / Page context — center */}
+        <div className="flex-1 px-4 hidden md:flex items-center gap-1.5 overflow-hidden">
+          <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12 }}>Home</span>
+          {/* Dynamic breadcrumbs from current route */}
+          {(() => {
+            const segments = location.pathname.split('/').filter(Boolean);
+            const pathMap: Record<string, string> = {
+              'dashboard':          'Dashboard',
+              'hazard-reporting':   'Hazard Reporting',
+              'near-miss':          'Near Miss',
+              'incident-log':       'Incident Log',
+              'action-tracker':     'CAPA / Actions',
+              'audit-management':   'Audit Management',
+              'inspection-records': 'Inspection Records',
+              'training-records':   'Training Records',
+              'reports':            'Reports',
+              'analytics':          'Analytics',
+              'settings':           'Settings',
+              'profile':            'Profile',
+            };
+            return segments.map((seg, i) => (
+              <React.Fragment key={seg}>
+                <ChevronRight className="h-3 w-3 shrink-0" style={{ color: 'rgba(255,255,255,0.25)' }} />
+                <span
+                  style={{
+                    fontSize: 12,
+                    fontWeight: i === segments.length - 1 ? 600 : 400,
+                    color: i === segments.length - 1
+                      ? 'rgba(255,255,255,0.9)'
+                      : 'rgba(255,255,255,0.45)',
+                  }}
+                >
+                  {pathMap[seg] ?? seg}
+                </span>
+              </React.Fragment>
+            ));
+          })()}
+        </div>
+
+        {/* Mobile hamburger */}
+        <button
+          className="md:hidden px-3 text-white/70 hover:text-white"
+          onClick={e => { e.stopPropagation(); setMobileMenuOpen(!mobileMenuOpen); }}
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+
+        {/* Right: Notifications + User */}
+        <div className="flex items-center gap-1 pr-3 shrink-0" onClick={e => e.stopPropagation()}>
+
+          {/* ---- Notification Bell ---- */}
+          <div className="relative">
             <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 -ml-2 text-muted-foreground hover:text-foreground"
+              onClick={() => { setShowNotifications(!showNotifications); setUserMenuOpen(false); }}
+              className="relative flex items-center justify-center w-8 h-8 rounded text-white/60 hover:text-white hover:bg-white/10 transition-colors"
             >
-              <Menu className="h-6 w-6" />
+              <Bell className="h-[18px] w-[18px]" />
+              {MOCK_NOTIFICATIONS.length > 0 && (
+                <span
+                  className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full border-2"
+                  style={{ backgroundColor: '#CB0017', borderColor: '#1A1818' }}
+                />
+              )}
             </button>
-            <div className="flex items-center gap-2">
-              <img src="/logo.svg" alt="LU Sukkur Plant Logo" className="h-10 w-auto" />
-            </div>
-            <div className="hidden lg:flex items-center ml-4 space-x-4 border-l border-border pl-4">
-              <span className="text-sm font-medium text-muted-foreground">Management Dashboard</span>
-            </div>
+
+            {showNotifications && (
+              <div className="fixed inset-0 z-[999] flex justify-end">
+                {/* Backdrop */}
+                <div 
+                  className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" 
+                  onClick={() => setShowNotifications(false)} 
+                />
+                
+                {/* Panel */}
+                <div 
+                  className="relative w-[320px] max-w-[90vw] h-full bg-white flex flex-col shadow-2xl"
+                  style={{ animation: 'slideInRight 0.2s ease-out forwards' }}
+                >
+                  <div className="flex items-center justify-between px-5 py-4 border-b border-[#F0F0F0] bg-[#FAFAFA]">
+                    <h3 className="text-[14px] font-bold text-[#1A1818]">
+                      Notifications <span className="text-[#CB0017] ml-1">{MOCK_NOTIFICATIONS.length}</span>
+                    </h3>
+                    <div className="flex items-center gap-3">
+                      <button className="text-[12px] text-[#CB0017] font-medium hover:underline">Mark all read</button>
+                      <button 
+                        onClick={() => setShowNotifications(false)}
+                        className="w-7 h-7 flex items-center justify-center rounded-md text-[#9CA3AF] hover:text-[#1A1818] hover:bg-[#E5E7EB] transition-colors"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="flex-1 overflow-y-auto">
+                    {MOCK_NOTIFICATIONS.map(n => {
+                      const cfg = NOTIF_TYPE[n.type];
+                      return (
+                        <div
+                          key={n.id}
+                          className="flex gap-3 px-5 py-4 border-b border-[#F7F7F7] hover:bg-[#F9FAFB] cursor-pointer transition-colors"
+                          onClick={() => { navigate(n.link); setShowNotifications(false); }}
+                        >
+                          <span
+                            className="mt-1.5 rounded-full shrink-0"
+                            style={{ width: 8, height: 8, backgroundColor: cfg.dot, marginTop: 6 }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[13px] font-medium text-[#1A1818] leading-snug">{n.title}</p>
+                            <p className="text-[11px] text-[#6B7280] mt-1 line-clamp-2">{n.detail}</p>
+                            <p className="text-[10px] text-[#9CA3AF] mt-1.5">{n.time}</p>
+                          </div>
+                          <ExternalLink className="h-3 w-3 text-[#D0D0D0] mt-1 shrink-0" />
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  <div className="p-4 border-t border-[#F0F0F0] bg-[#FAFAFA]">
+                    <button className="w-full h-9 flex items-center justify-center text-[13px] font-medium text-[#374151] border border-[#E0E0E0] rounded-md hover:bg-[#F5F5F5] transition-colors">
+                      View All Notifications
+                    </button>
+                  </div>
+                </div>
+                
+                <style>{`
+                  @keyframes slideInRight {
+                    from { transform: translateX(100%); }
+                    to { transform: translateX(0); }
+                  }
+                `}</style>
+              </div>
+            )}
           </div>
 
-          <div className="ml-auto flex items-center space-x-2 sm:space-x-4">
-            <div className="hidden lg:flex items-center space-x-2 bg-background/50 backdrop-blur-md border border-white/10 dark:border-white/5 p-1.5 rounded-full shadow-sm hover:shadow-md transition-shadow">
-              <span className="text-muted-foreground px-3 text-xs font-medium uppercase tracking-wider">Date</span>
-              <input
-                type="date"
-                value={filters.fromDate}
-                onChange={(e) => setFilter('fromDate', e.target.value)}
-                className="bg-transparent border-none focus:ring-0 text-foreground cursor-pointer p-0 text-sm font-medium"
-              />
-              <span className="text-muted-foreground px-2 border-l border-border/50 pl-2 text-xs font-medium uppercase tracking-wider">To</span>
-              <input
-                type="date"
-                value={filters.toDate}
-                onChange={(e) => setFilter('toDate', e.target.value)}
-                className="bg-transparent border-none focus:ring-0 text-foreground cursor-pointer p-0 text-sm font-medium pr-3"
-              />
-            </div>
+          {/* Divider */}
+          <div className="h-5 w-px bg-white/15 mx-1" />
 
-            <div className="hidden md:flex items-center space-x-2 bg-background/50 backdrop-blur-md border border-white/10 dark:border-white/5 p-1.5 rounded-full shadow-sm hover:shadow-md transition-shadow">
-              <select
-                value={filters.year}
-                onChange={(e) => setFilter('year', e.target.value)}
-                className="text-sm font-medium bg-transparent border-none focus:ring-0 text-foreground cursor-pointer pl-3"
+          {/* ---- User Menu ---- */}
+          <div className="relative">
+            <button
+              onClick={() => { setUserMenuOpen(!userMenuOpen); setShowNotifications(false); }}
+              className="flex items-center gap-2 h-8 pl-1.5 pr-2 rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              {/* Avatar */}
+              <div
+                className="h-6 w-6 rounded flex items-center justify-center text-white text-[10px] font-bold shrink-0"
+                style={{ backgroundColor: '#CB0017' }}
               >
-                <option value="All">All Time</option>
-                <option value="2024">2024</option>
-                <option value="2025">2025</option>
-                <option value="2026">2026</option>
-              </select>
-              <select
-                value={filters.department}
-                onChange={(e) => setFilter('department', e.target.value)}
-                disabled={isRestrictedDept}
-                className={`text-sm font-medium bg-transparent border-none focus:ring-0 text-foreground border-l border-border/50 pl-2 ${isRestrictedDept ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
-              >
-                <option value="All">All Depts</option>
-                {DEPARTMENTS.map(dept => (
-                  <option key={dept} value={dept}>{dept}</option>
-                ))}
-              </select>
-              <select
-                value={filters.status}
-                onChange={(e) => setFilter('status', e.target.value)}
-                className="text-sm font-medium bg-transparent border-none focus:ring-0 text-foreground cursor-pointer border-l border-border/50 pl-2 pr-3"
-              >
-                <option value="All">All Status</option>
-                <option value="Open">Open</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Closed">Closed</option>
-              </select>
-            </div>
-
-            <div className="flex items-center gap-2 border-l border-border/50 pl-4">
-              <div className="relative pr-2 flex items-center">
-                <button
-                  onClick={() => {
-                    setShowNotifications(!showNotifications);
-                    setUserMenuOpen(false);
-                  }}
-                  className="p-2 text-muted-foreground hover:text-foreground relative transition-colors rounded-full hover:bg-muted/30"
-                >
-                  <Bell className="h-5 w-5" />
-                  {mockNotifications.length > 0 && (
-                    <span className="absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full bg-danger border-2 border-card animate-pulse"></span>
-                  )}
-                </button>
-
-                {showNotifications && (
-                  <div className="absolute top-full right-0 mt-2 w-80 glass-panel rounded-xl card-shadow z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
-                    <div className="p-3 border-b border-border/50 flex justify-between items-center bg-muted/20">
-                      <h3 className="font-semibold text-sm">Notifications</h3>
-                      <button className="text-xs text-primary hover:underline font-medium">Mark all as read</button>
-                    </div>
-                    <div className="max-h-80 overflow-y-auto hide-scrollbar">
-                      {mockNotifications.map(n => (
-                        <div key={n.id} className="p-3 border-b border-border/30 hover:bg-muted/30 cursor-pointer transition-colors flex gap-3 items-start">
-                          <div className={`mt-0.5 h-2.5 w-2.5 rounded-full shrink-0 shadow-sm ${n.type === 'danger' ? 'bg-danger shadow-danger/50' :
-                              n.type === 'warning' ? 'bg-secondary shadow-secondary/50' : 'bg-primary shadow-primary/50'
-                            }`} />
-                          <div>
-                            <p className="text-sm text-foreground leading-tight font-medium">{n.text}</p>
-                            <p className="text-xs text-muted-foreground mt-1">{n.time}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="p-2 text-center bg-muted/20 border-t border-border/50">
-                      <button className="text-xs font-medium text-muted-foreground hover:text-primary transition-colors">View all notifications</button>
-                    </div>
-                  </div>
-                )}
+                {initials}
               </div>
-
-              {/* User Profile Dropdown */}
-              <div className="relative flex items-center">
-                <button
-                  onClick={() => {
-                    setUserMenuOpen(!userMenuOpen);
-                    setShowNotifications(false);
-                  }}
-                  className="flex items-center gap-2 p-1.5 pr-3 rounded-full hover:bg-muted/30 transition-colors border border-transparent hover:border-border/50"
-                >
-                  <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold shadow-sm">
-                    <User className="h-4 w-4" />
-                  </div>
-                  <div className="hidden sm:flex flex-col items-start">
-                    <span className="text-sm font-semibold leading-none">{user?.name || 'User'}</span>
-                    <span className="text-xs text-muted-foreground mt-0.5">{user?.role || 'Guest'}</span>
-                  </div>
-                  <ChevronDown className="h-4 w-4 text-muted-foreground ml-1" />
-                </button>
-
-                {userMenuOpen && (
-                  <div className="absolute top-full right-0 mt-2 w-56 glass-panel rounded-xl card-shadow z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
-                    <div className="p-4 border-b border-border/50 bg-muted/10">
-                      <p className="font-semibold text-sm">{user?.name || 'User'}</p>
-                      <p className="text-xs text-muted-foreground truncate">{user?.email || 'user@example.com'}</p>
-                    </div>
-                    <div className="p-1">
-                      <button onClick={() => { setUserMenuOpen(false); navigate('/settings'); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted/40 rounded-lg transition-colors">
-                        <UserCircle className="h-4 w-4 text-muted-foreground" /> Profile
-                      </button>
-                      <button onClick={() => { setUserMenuOpen(false); navigate('/settings'); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted/40 rounded-lg transition-colors">
-                        <SettingsIcon className="h-4 w-4 text-muted-foreground" /> Settings
-                      </button>
-                      <button className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted/40 rounded-lg transition-colors">
-                        <HelpCircle className="h-4 w-4 text-muted-foreground" /> Help & Support
-                      </button>
-                    </div>
-                    <div className="p-1 border-t border-border/50">
-                      <button
-                        onClick={handleLogout}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-danger hover:bg-danger/10 hover:text-danger rounded-lg transition-colors font-medium"
-                      >
-                        <LogOut className="h-4 w-4" /> Sign out
-                      </button>
-                    </div>
-                  </div>
-                )}
+              <div className="hidden sm:block text-left leading-none">
+                <p className="text-white text-[11px] font-semibold">
+                  {user?.name?.split(' ')[0] ?? 'User'}
+                </p>
+                <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                  {user?.role ?? 'Staff'}
+                </p>
               </div>
-            </div>
+              <ChevronDown className="h-3 w-3" style={{ color: 'rgba(255,255,255,0.4)' }} />
+            </button>
+
+            {userMenuOpen && (
+              <div
+                className="absolute top-full right-0 mt-2 w-52 bg-white rounded-lg overflow-hidden"
+                style={{ border: '1px solid #E0E0E0', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.14)', zIndex: 999 }}
+              >
+                {/* User info */}
+                <div className="px-4 py-3 border-b border-[#F0F0F0] bg-[#FAFAFA]">
+                  <p className="text-[13px] font-semibold text-[#1A1818]">{user?.name ?? 'User'}</p>
+                  <p className="text-[11px] text-[#6B7280] truncate">{user?.email ?? ''}</p>
+                  <span
+                    className="mt-1.5 inline-block text-[10px] font-semibold px-2 py-0.5 rounded"
+                    style={{ backgroundColor: '#FFF7F7', color: '#CB0017', border: '1px solid rgba(203,0,23,0.2)' }}
+                  >
+                    {user?.role ?? 'Staff'}
+                  </span>
+                </div>
+                {/* Menu items */}
+                <div className="py-1">
+                  {[
+                    { icon: UserCircle, label: 'My Profile', action: () => { navigate('/settings'); setUserMenuOpen(false); } },
+                    { icon: SettingsIcon, label: 'Settings', action: () => { navigate('/settings'); setUserMenuOpen(false); } },
+                    { icon: HelpCircle, label: 'Help & Support', action: () => setUserMenuOpen(false) },
+                  ].map(({ icon: Icon, label, action }) => (
+                    <button
+                      key={label}
+                      onClick={action}
+                      className="flex w-full items-center gap-2.5 px-4 py-2 text-[13px] text-[#374151] hover:bg-[#F5F5F5] transition-colors"
+                    >
+                      <Icon className="h-4 w-4 text-[#9CA3AF]" />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <div className="py-1 border-t border-[#F0F0F0]">
+                  <button
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-2.5 px-4 py-2 text-[13px] font-medium hover:bg-[#FEF2F2] transition-colors"
+                    style={{ color: '#CB0017' }}
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Sign Out
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden relative">
-        {/* Spacer to prevent layout shift when sidebar becomes absolute */}
-        <div className={`hidden md:block transition-all duration-300 ease-in-out flex-shrink-0 ${collapsed ? 'w-16' : 'w-64'}`} />
+      {/* ================================================================
+          BODY — Sidebar + Main
+          ================================================================ */}
+      <div className="flex flex-1 pt-12">
 
-        {/* Sidebar */}
+        {/* Sidebar spacer (prevents content jump) */}
+        <div
+          className="hidden md:block shrink-0 transition-all duration-200"
+          style={{ width: sidebarWidth }}
+        />
+
+        {/* ---- LEFT SIDEBAR ---- */}
         <aside
-          onMouseEnter={() => collapsed && setSidebarHovered(true)}
-          onMouseLeave={() => collapsed && setSidebarHovered(false)}
-          className={`${(collapsed && !sidebarHovered) ? 'w-16' : 'w-64'
-            } ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} 
-          fixed md:absolute left-0 z-40 h-[calc(100vh-4rem)] border-r border-border/50 glass transition-all duration-300 ease-in-out flex flex-col ${collapsed && sidebarHovered ? 'shadow-2xl' : ''}`}
+          className={`
+            fixed left-0 top-12 bottom-0 flex flex-col
+            bg-[#F8F9FA] border-r border-[#EAEAEA] z-40
+            transition-all duration-200 ease-in-out
+            ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+          `}
+          style={{ width: sidebarWidth }}
         >
-          <div className="flex-1 overflow-y-auto py-6 hide-scrollbar">
-            <nav className="space-y-2.5 px-3">
-              {sidebarItems.map((item) => {
-                if (item.href === '/reports' && !canViewReports()) return null;
+          {/* Navigation */}
+          <nav className="flex-1 overflow-y-auto py-3 hide-scrollbar">
+            {NAV_GROUPS.map(group => (
+              <div key={group.label} className="mb-2">
+                {/* Group label */}
+                {!collapsed && (
+                  <span className="block px-5 py-1.5 text-[11px] font-bold text-[#8B8D98] uppercase tracking-[0.05em]">
+                    {group.label}
+                  </span>
+                )}
+                {/* Group items */}
+                <div className={collapsed ? 'mt-1' : ''}>
+                  {group.items.map(item => {
+                    // Permission check for reports
+                    if (item.href === '/reports' && !canViewReports()) return null;
 
-                return (
-                  <NavLink
-                    key={item.href}
-                    to={item.href}
-                    className={({ isActive }) =>
-                      `relative flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-all overflow-hidden group ${isActive
-                        ? 'text-primary bg-primary/10 shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                      }`
-                    }
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    {/* Active state indicator */}
-                    <NavLinkIndicator isActive={location.pathname.startsWith(item.href)} />
+                    const isActive = getIsActive(location.pathname, item.href);
 
-                    <span className={`relative z-10 transition-colors ${collapsed && !sidebarHovered ? 'mx-auto' : ''}`}>
-                      {item.icon}
-                    </span>
-                    {(!collapsed || sidebarHovered) && (
-                      <span className="relative z-10 tracking-wide font-medium whitespace-nowrap animate-in fade-in duration-300">
-                        {item.title}
-                      </span>
-                    )}
-                  </NavLink>
-                );
-              })}
-            </nav>
-          </div>
-          <div className="hidden md:flex p-4 border-t border-border">
+                    return (
+                      <NavLink
+                        key={item.href}
+                        to={item.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={`
+                          relative flex items-center gap-3 mx-3 mb-1
+                          text-[13px] font-semibold rounded-md transition-all duration-150
+                          ${collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'}
+                          ${isActive 
+                            ? 'bg-white text-[#1A1818] shadow-[0_1px_3px_rgba(0,0,0,0.08)] ring-1 ring-black/[0.03]' 
+                            : 'text-[#4B5563] hover:bg-[#EDEEF0] hover:text-[#1A1818]'
+                          }
+                        `}
+                        title={collapsed ? item.title : undefined}
+                      >
+                        {/* Active left indicator */}
+                        {isActive && (
+                          <div className="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-[#CB0017] rounded-r-full" />
+                        )}
+                        <item.Icon
+                          className="shrink-0 transition-colors duration-150"
+                          style={{
+                            width: 17, height: 17,
+                            color: isActive ? '#CB0017' : 'currentColor',
+                            opacity: isActive ? 1 : 0.6
+                          }}
+                        />
+                        {!collapsed && (
+                          <span className="truncate leading-none">{item.title}</span>
+                        )}
+                      </NavLink>
+                    );
+                  })}
+                </div>
+
+              </div>
+            ))}
+          </nav>
+
+          {/* Sidebar footer — version + collapse toggle */}
+          <div className="border-t border-[#E0E0E0] p-2">
+            {!collapsed && (
+              <p className="text-[10px] text-center mb-1.5 select-none" style={{ color: '#D1D5DB' }}>
+                CBL HSE Management · v1.0.0
+              </p>
+            )}
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className="flex w-full items-center justify-center rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="flex w-full items-center justify-center h-8 rounded text-[#9CA3AF] hover:text-[#374151] hover:bg-[#F5F5F5] transition-colors"
+              title={collapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
             >
-              {collapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+              {collapsed
+                ? <ChevronRight className="h-4 w-4" />
+                : <ChevronLeft  className="h-4 w-4" />
+              }
             </button>
           </div>
         </aside>
 
-        {/* Overlay for mobile sidebar */}
+        {/* Mobile overlay */}
         {mobileMenuOpen && (
           <div
-            className="fixed inset-0 bg-black/20 z-30 md:hidden"
+            className="fixed inset-0 bg-black/30 z-30 md:hidden"
             onClick={() => setMobileMenuOpen(false)}
           />
         )}
 
-        {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-background p-4 md:p-6">
-          <div className="mx-auto max-w-7xl">
-            {/* Mobile Filters (visible only on small screens) */}
-            <div className="md:hidden flex flex-wrap gap-2 mb-4 bg-card p-3 rounded-md border border-border shadow-sm">
-              <input
-                type="date"
-                value={filters.fromDate}
-                onChange={(e) => setFilter('fromDate', e.target.value)}
-                className="text-sm bg-muted text-foreground rounded px-2 py-1 flex-1"
-                placeholder="From"
-              />
-              <input
-                type="date"
-                value={filters.toDate}
-                onChange={(e) => setFilter('toDate', e.target.value)}
-                className="text-sm bg-muted text-foreground rounded px-2 py-1 flex-1"
-                placeholder="To"
-              />
-              <select
-                value={filters.year}
-                onChange={(e) => setFilter('year', e.target.value)}
-                className="text-sm bg-muted text-foreground rounded px-2 py-1 flex-1"
-              >
-                <option value="All">All Time</option>
-                <option value="2024">2024</option>
-                <option value="2025">2025</option>
-                <option value="2026">2026</option>
-              </select>
-              <select
-                value={filters.department}
-                onChange={(e) => setFilter('department', e.target.value)}
-                disabled={isRestrictedDept}
-                className={`text-sm bg-muted text-foreground rounded px-2 py-1 flex-1 ${isRestrictedDept ? 'opacity-70' : ''}`}
-              >
-                <option value="All">All Depts</option>
-                {DEPARTMENTS.map(dept => (
-                  <option key={dept} value={dept}>{dept}</option>
-                ))}
-              </select>
-            </div>
-
-            {children}
-          </div>
+        {/* ---- MAIN CONTENT AREA ---- */}
+        {/* bg-[#F5F5F5] = SAP shell workspace grey */}
+        <main className="flex-1 overflow-y-auto min-h-[calc(100vh-48px)] bg-[#F5F5F5]">
+          {children}
         </main>
+
       </div>
     </div>
   );

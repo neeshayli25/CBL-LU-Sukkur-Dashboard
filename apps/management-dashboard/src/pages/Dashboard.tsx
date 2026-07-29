@@ -13,14 +13,15 @@ import { ContextHeader }        from '../components/ContextHeader';
 import { StatusBadge }          from '../components/StatusBadge';
 import { useFilters }           from '../context/FilterContext';
 import {
-  AlertCircle, Clock, CheckCircle2, FileWarning, Timer,
-  Activity, HeartPulse, Flame, Calendar, ListTodo, ShieldAlert,
-  Users, BookOpen, TrendingUp, AlertTriangle, ArrowRight,
-  CheckCircle, XCircle, Info, RefreshCw, ChevronDown, ChevronUp,
+  CheckCircle2, FileWarning, Timer,
+  ListTodo, ShieldAlert,
+  Users, BookOpen, AlertTriangle, ArrowRight,
+  CheckCircle, XCircle, Info, RefreshCw,
 } from 'lucide-react';
 import { moduleService }        from '../services/api/moduleService';
 import { CHART_COLORS, PIE_COLORS } from '../config/constants';
 import { useDashboardMetrics, type DashboardRawData, type MetricItem } from '../hooks/useDashboardMetrics';
+
 
 // ===== Enterprise Chart Tooltip =====
 const EnterpriseTooltip = ({ active, payload, label }: any) => {

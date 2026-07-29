@@ -1,5 +1,5 @@
 import React from 'react';
-import { Filter, X, RotateCcw } from 'lucide-react';
+import { Filter, RotateCcw } from 'lucide-react';
 import { useFilters } from '../context/FilterContext';
 import { usePermissions } from '@cbl/auth';
 import { DEPARTMENTS } from '../config/constants';

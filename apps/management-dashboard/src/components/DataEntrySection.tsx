@@ -3,7 +3,9 @@ import { Layout }          from './Layout';
 import { FilterBar }       from './FilterBar';
 import { ContextHeader }   from './ContextHeader';
 import { StatusBadge }     from './StatusBadge';
+import { StepWizard }      from './StepWizard';
 import { iconMap }         from './iconMap';
+import { ALL_SECTIONS }    from '../config/sectionSchemas';
 import type { SectionConfig, ColumnSchema } from '../config/sectionSchemas';
 import {
   Plus, Save, Trash2, Download, Edit2, X, RefreshCw, History,
@@ -485,91 +487,109 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
       </div>
 
       {/* ================================================================
-          ADD RECORD MODAL — SAP Fiori dialog style
+          ADD RECORD MODAL OR STEP WIZARD
           ================================================================ */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div
-            className="bg-white w-full max-w-4xl max-h-[90vh] rounded-lg overflow-hidden flex flex-col"
-            style={{ border: '1px solid #E0E0E0', boxShadow: '0 20px 60px 0 rgba(0,0,0,0.18)' }}
-          >
-            {/* Dialog header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-[#E0E0E0] bg-[#FAFAFA]">
-              <div className="flex items-center gap-3">
-                {IconComponent && (
-                  <div className="p-2 rounded" style={{ backgroundColor: '#FFF7F7', color: '#CB0017' }}>
-                    <IconComponent className="h-4 w-4" />
-                  </div>
-                )}
-                <div>
-                  <h2 className="text-[15px] font-bold text-[#1A1818]">New {schema.title} Record</h2>
-                  <p className="text-[11px] text-[#9CA3AF]">Fill in the required fields and save</p>
-                </div>
-              </div>
-              <button
-                onClick={() => { setIsAddModalOpen(false); setValidationError(null); setFormData({}); }}
-                className="w-8 h-8 flex items-center justify-center rounded text-[#9CA3AF] hover:text-[#374151] hover:bg-[#F5F5F5] transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            {/* Dialog body */}
-            <div className="flex-1 overflow-y-auto p-6">
-              {validationError && (
-                <div
-                  className="flex items-start gap-3 mb-6 p-4 rounded-lg"
-                  style={{ backgroundColor: '#FEF2F2', border: '1px solid #FECACA' }}
-                >
-                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" style={{ color: '#DC2626' }} />
-                  <div>
-                    <p className="text-[13px] font-semibold" style={{ color: '#991B1B' }}>Validation Error</p>
-                    <p className="text-[12px] mt-0.5" style={{ color: '#B91C1C' }}>{validationError}</p>
-                  </div>
-                </div>
-              )}
-
-              <form id="add-form" onSubmit={handleSubmit}>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {schema.columns.filter(c => !c.hideFromForm).map(col => (
-                    <div key={col.key} className={col.type === 'textarea' ? 'md:col-span-2 lg:col-span-3' : ''}>
-                      <label className="block text-[12px] font-semibold text-[#374151] mb-1.5 uppercase tracking-wide">
-                        {col.label}
-                        {col.required && <span className="text-[#CB0017] ml-1">*</span>}
-                      </label>
-                      {renderField(col, formData[col.key], handleInputChange, false)}
+        ['incident-log', 'hazard-reporting', 'near-miss'].includes(schema.id) ? (
+          <StepWizard
+            isOpen={isAddModalOpen}
+            onClose={() => { setIsAddModalOpen(false); setValidationError(null); setFormData({}); }}
+            schema={schema}
+            initialData={formData}
+            onSave={async (data) => {
+              setValidationError(null);
+              const dataToSave = applyComputes(data, schema, entries);
+              const err = validateFormData(dataToSave);
+              if (err) { setValidationError(err); return; }
+              const result = await createRecord(dataToSave);
+              if (result.success) { setFormData({}); setIsAddModalOpen(false); }
+              else alert(`Error adding record: ${result.message}`);
+            }}
+          />
+        ) : (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div
+              className="bg-white w-full max-w-4xl max-h-[90vh] rounded-lg overflow-hidden flex flex-col"
+              style={{ border: '1px solid #E0E0E0', boxShadow: '0 20px 60px 0 rgba(0,0,0,0.18)' }}
+            >
+              {/* Dialog header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-[#E0E0E0] bg-[#FAFAFA]">
+                <div className="flex items-center gap-3">
+                  {IconComponent && (
+                    <div className="p-2 rounded" style={{ backgroundColor: '#FFF7F7', color: '#CB0017' }}>
+                      <IconComponent className="h-4 w-4" />
                     </div>
-                  ))}
+                  )}
+                  <div>
+                    <h2 className="text-[15px] font-bold text-[#1A1818]">New {schema.title} Record</h2>
+                    <p className="text-[11px] text-[#9CA3AF]">Fill in the required fields and save</p>
+                  </div>
                 </div>
-              </form>
-            </div>
-
-            {/* Dialog footer */}
-            <div className="flex items-center justify-between px-6 py-4 border-t border-[#E0E0E0] bg-[#FAFAFA]">
-              <p className="text-[11px] text-[#9CA3AF]">
-                Fields marked <span className="text-[#CB0017]">*</span> are required
-              </p>
-              <div className="flex items-center gap-2">
                 <button
                   onClick={() => { setIsAddModalOpen(false); setValidationError(null); setFormData({}); }}
-                  className="h-9 px-4 text-[13px] font-medium text-[#374151] border border-[#E0E0E0] rounded-md hover:bg-[#F5F5F5] transition-colors"
+                  className="w-8 h-8 flex items-center justify-center rounded text-[#9CA3AF] hover:text-[#374151] hover:bg-[#F5F5F5] transition-colors"
                 >
-                  Cancel
+                  <X className="h-4 w-4" />
                 </button>
-                <button
-                  type="submit"
-                  form="add-form"
-                  className="flex items-center gap-1.5 h-9 px-5 text-[13px] font-medium text-white rounded-md transition-colors"
-                  style={{ backgroundColor: '#CB0017' }}
-                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A8001A')}
-                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#CB0017')}
-                >
-                  <Save className="h-3.5 w-3.5" /> Save Record
-                </button>
+              </div>
+
+              {/* Dialog body */}
+              <div className="flex-1 overflow-y-auto p-6">
+                {validationError && (
+                  <div
+                    className="flex items-start gap-3 mb-6 p-4 rounded-lg"
+                    style={{ backgroundColor: '#FEF2F2', border: '1px solid #FECACA' }}
+                  >
+                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" style={{ color: '#DC2626' }} />
+                    <div>
+                      <p className="text-[13px] font-semibold" style={{ color: '#991B1B' }}>Validation Error</p>
+                      <p className="text-[12px] mt-0.5" style={{ color: '#B91C1C' }}>{validationError}</p>
+                    </div>
+                  </div>
+                )}
+
+                <form id="add-form" onSubmit={handleSubmit}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {schema.columns.filter(c => !c.hideFromForm).map(col => (
+                      <div key={col.key} className={col.type === 'textarea' ? 'md:col-span-2 lg:col-span-3' : ''}>
+                        <label className="block text-[12px] font-semibold text-[#374151] mb-1.5 uppercase tracking-wide">
+                          {col.label}
+                          {col.required && <span className="text-[#CB0017] ml-1">*</span>}
+                        </label>
+                        {renderField(col, formData[col.key], handleInputChange, false)}
+                      </div>
+                    ))}
+                  </div>
+                </form>
+              </div>
+
+              {/* Dialog footer */}
+              <div className="flex items-center justify-between px-6 py-4 border-t border-[#E0E0E0] bg-[#FAFAFA]">
+                <p className="text-[11px] text-[#9CA3AF]">
+                  Fields marked <span className="text-[#CB0017]">*</span> are required
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => { setIsAddModalOpen(false); setValidationError(null); setFormData({}); }}
+                    className="h-9 px-4 text-[13px] font-medium text-[#374151] border border-[#E0E0E0] rounded-md hover:bg-[#F5F5F5] transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    form="add-form"
+                    className="flex items-center gap-1.5 h-9 px-5 text-[13px] font-medium text-white rounded-md transition-colors"
+                    style={{ backgroundColor: '#CB0017' }}
+                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A8001A')}
+                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#CB0017')}
+                  >
+                    <Save className="h-3.5 w-3.5" /> Save Record
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )
       )}
 
       {/* ================================================================
