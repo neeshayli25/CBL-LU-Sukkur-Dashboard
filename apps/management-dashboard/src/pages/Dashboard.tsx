@@ -1,112 +1,147 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, LineChart, Line
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip as RechartsTooltip, ResponsiveContainer,
+  LineChart, Line, PieChart, Pie, Cell,
 } from 'recharts';
-import { Layout } from '../components/Layout';
-import { CenterModal } from '../components/CenterModal';
-import { DonutChartWithLegend } from '../components/DonutChartWithLegend';
-import { useFilters } from '../context/FilterContext';
-import { AlertCircle, Clock, CheckCircle2, FileWarning, Timer, Activity, HeartPulse, Flame, Calendar, ListTodo, ShieldAlert, Search, Users, BookOpen, TrendingUp, AlertTriangle, ArrowRight, Info, CheckCircle, XCircle } from 'lucide-react';
-import { moduleService } from '../services/api/moduleService';
-
+import { Layout }               from '../components/Layout';
+import { CenterModal }          from '../components/CenterModal';
+import { KpiTile }              from '../components/KpiTile';
+import { FilterBar }            from '../components/FilterBar';
+import { ContextHeader }        from '../components/ContextHeader';
+import { StatusBadge }          from '../components/StatusBadge';
+import { useFilters }           from '../context/FilterContext';
+import {
+  AlertCircle, Clock, CheckCircle2, FileWarning, Timer,
+  Activity, HeartPulse, Flame, Calendar, ListTodo, ShieldAlert,
+  Users, BookOpen, TrendingUp, AlertTriangle, ArrowRight,
+  CheckCircle, XCircle, Info, RefreshCw, ChevronDown, ChevronUp,
+} from 'lucide-react';
+import { moduleService }        from '../services/api/moduleService';
 import { CHART_COLORS, PIE_COLORS } from '../config/constants';
 import { useDashboardMetrics, type DashboardRawData, type MetricItem } from '../hooks/useDashboardMetrics';
 
-
-const PIE_COLORS_STATUS = [CHART_COLORS.warning, CHART_COLORS.success, CHART_COLORS.danger];
-const PIE_COLORS_RISK = [CHART_COLORS.info, CHART_COLORS.success, CHART_COLORS.warning, CHART_COLORS.danger];
-
-const getStatusColor = (status?: string) => {
-  switch(status) {
-    case 'success': return 'text-success';
-    case 'warning': return 'text-warning'; // or text-amber-500 depending on tailwind setup
-    case 'danger': return 'text-danger';
-    default: return 'text-muted-foreground';
-  }
+// ===== Enterprise Chart Tooltip =====
+const EnterpriseTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-white border border-[#E0E0E0] rounded-lg px-3 py-2"
+         style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}>
+      <p className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-wide mb-1">{label}</p>
+      {payload.map((p: any) => (
+        <div key={p.name} className="flex items-center gap-2 text-[13px] font-medium">
+          <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color || p.fill }} />
+          <span className="text-[#1A1818]">{p.name ? `${p.name}: ` : ''}{p.value}</span>
+        </div>
+      ))}
+    </div>
+  );
 };
 
-const getStatusBgColor = (status?: string) => {
-  switch(status) {
-    case 'success': return 'bg-success/10';
-    case 'warning': return 'bg-warning/10';
-    case 'danger': return 'bg-danger/10';
-    default: return 'bg-muted/50';
-  }
-};
-
+// ===== Metric Detail Row (for leading/lagging modals) =====
 const MetricRow = ({ metric }: { metric: MetricItem }) => {
   const navigate = useNavigate();
   const isClickable = metric.path && !metric.isPendingModule;
 
+  const iconEl =
+    metric.status === 'success' ? <CheckCircle  className="w-4 h-4" /> :
+    metric.status === 'warning' ? <AlertTriangle className="w-4 h-4" /> :
+    metric.status === 'danger'  ? <XCircle       className="w-4 h-4" /> :
+                                  <Info          className="w-4 h-4" />;
+
+  const iconBg =
+    metric.status === 'success' ? { bg: '#ECFDF5', color: '#059669' } :
+    metric.status === 'warning' ? { bg: '#FFFBEB', color: '#D97706' } :
+    metric.status === 'danger'  ? { bg: '#FEF2F2', color: '#DC2626' } :
+                                  { bg: '#F3F4F6', color: '#6B7280' };
+
   return (
-    <div 
+    <div
       onClick={() => isClickable && navigate(metric.path!)}
-      className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-4 px-4 border border-border/50 bg-card rounded-xl group transition-all ${isClickable ? 'cursor-pointer hover:bg-muted/30 hover:shadow-md hover:border-primary/30' : ''}`}
+      className={`flex items-center justify-between gap-4 py-3 px-4 border-b border-[#F3F4F6] last:border-0 ${
+        isClickable ? 'cursor-pointer hover:bg-[#F9FAFB] transition-colors' : ''
+      }`}
     >
       <div className="flex items-center gap-3 min-w-0">
-        <div className={`p-2 rounded-full flex-shrink-0 ${metric.bgClass || getStatusBgColor(metric.status)} ${metric.iconClass || getStatusColor(metric.status)}`}>
-          {metric.status === 'success' && <CheckCircle className="w-5 h-5" />}
-          {metric.status === 'warning' && <AlertTriangle className="w-5 h-5" />}
-          {metric.status === 'danger' && <XCircle className="w-5 h-5" />}
-          {(!metric.status || metric.status === 'neutral') && <Info className="w-5 h-5" />}
+        <div className="p-1.5 rounded" style={{ backgroundColor: iconBg.bg, color: iconBg.color }}>
+          {iconEl}
         </div>
         <div className="min-w-0">
-          <span className={`font-semibold text-sm block truncate ${isClickable ? 'text-foreground group-hover:text-primary transition-colors' : 'text-foreground'}`} title={metric.name}>
-            {metric.name}
-          </span>
+          <span className="text-[13px] font-medium text-[#1A1818] block truncate">{metric.name}</span>
           {metric.isPendingModule && (
-            <span className="mt-1 inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground ring-1 ring-inset ring-muted-foreground/20">
-              Pending Module
-            </span>
+            <span className="text-[10px] text-[#9CA3AF] font-medium uppercase tracking-wide">Pending Module</span>
           )}
         </div>
       </div>
-      <div className="text-left sm:text-right flex flex-col sm:items-end flex-shrink-0 ml-11 sm:ml-0">
-        <div className={`font-bold text-lg ${getStatusColor(metric.status)}`}>
-          {metric.value} <span className="text-sm font-normal text-muted-foreground ml-1">{metric.unit}</span>
+      <div className="text-right shrink-0">
+        <div className="text-[15px] font-bold text-[#1A1818] tabular-nums">
+          {metric.value}
+          {metric.unit && <span className="text-[12px] font-normal text-[#9CA3AF] ml-1">{metric.unit}</span>}
         </div>
         {metric.target !== undefined && (
-          <div className="text-xs text-muted-foreground mt-0.5">Target: {metric.target}</div>
+          <div className="text-[11px] text-[#9CA3AF]">Target: {metric.target}</div>
         )}
       </div>
     </div>
   );
 };
 
-const StatCard = ({ title, value, icon, color, onClick }: any) => (
-  <div 
-    onClick={onClick}
-    className={`bg-card rounded-xl p-5 border-l-4 border-t border-r border-b border-border card-shadow flex flex-col justify-between ${onClick ? 'cursor-pointer hover:shadow-md hover:scale-[1.02] hover:bg-muted/30 transition-all' : ''}`} 
-    style={{ borderLeftColor: color || CHART_COLORS.maroon }}
-  >
-    <div className="flex justify-between items-start mb-4">
-      <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
-      <div className="p-2 bg-muted/50 rounded-md" style={{ color: color || CHART_COLORS.maroon }}>{icon}</div>
+// ===== Section Header =====
+const SectionHeader = ({ title, onViewAll, onToggle, expanded }: {
+  title: string; onViewAll?: () => void; onToggle?: () => void; expanded?: boolean;
+}) => (
+  <div className="flex items-center justify-between mb-4">
+    <div className="flex items-center gap-2">
+      <div className="w-1 h-5 rounded-full bg-[#CB0017]" />
+      <h2 className="text-[13px] font-bold text-[#374151] uppercase tracking-wider">{title}</h2>
     </div>
-    <div>
-      <p className="text-3xl font-bold text-foreground">{value}</p>
+    <div className="flex items-center gap-2">
+      {onViewAll && (
+        <button
+          onClick={onViewAll}
+          className="flex items-center gap-1 text-[12px] font-medium text-[#CB0017] hover:underline transition-colors"
+        >
+          View Details <ArrowRight className="h-3 w-3" />
+        </button>
+      )}
+      {onToggle && (
+        <button onClick={onToggle} className="p-1 rounded hover:bg-[#F5F5F5] text-[#9CA3AF] hover:text-[#374151] transition-colors">
+          {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </button>
+      )}
     </div>
   </div>
 );
 
+// ===== Enterprise Panel =====
+const Panel = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
+  <div className={`bg-white border border-[#E0E0E0] rounded-lg ${className}`}
+       style={{ boxShadow: '0 1px 4px 0 rgba(0,0,0,0.06)' }}>
+    {children}
+  </div>
+);
+
+const PIE_COLORS_STATUS = [CHART_COLORS.warning, CHART_COLORS.success, CHART_COLORS.danger];
+const PIE_COLORS_RISK   = [CHART_COLORS.info, CHART_COLORS.success, CHART_COLORS.warning, CHART_COLORS.danger];
+
 export const Dashboard = () => {
-  const navigate = useNavigate();
+  const navigate    = useNavigate();
   const { filters } = useFilters();
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('Incidents');
-  
-  const [hazards, setHazards] = useState<any[]>([]);
-  const [nearMisses, setNearMisses] = useState<any[]>([]);
-  const [incidents, setIncidents] = useState<any[]>([]);
-  const [capas, setCapas] = useState<any[]>([]);
-  const [training, setTraining] = useState<any[]>([]);
-
-  const [rawData, setRawData] = useState<DashboardRawData>({
-    hazards: [], nearMisses: [], incidents: [], capas: [], training: [], inspections: [], drills: [], legal: [], audits: []
-  });
-
+  const [loading,   setLoading]   = useState(true);
   const [isLeadingOpen, setIsLeadingOpen] = useState(false);
   const [isLaggingOpen, setIsLaggingOpen] = useState(false);
+
+  const [hazards,    setHazards]    = useState<any[]>([]);
+  const [nearMisses, setNearMisses] = useState<any[]>([]);
+  const [incidents,  setIncidents]  = useState<any[]>([]);
+  const [capas,      setCapas]      = useState<any[]>([]);
+  const [training,   setTraining]   = useState<any[]>([]);
+
+  const [rawData, setRawData] = useState<DashboardRawData>({
+    hazards: [], nearMisses: [], incidents: [], capas: [],
+    training: [], inspections: [], drills: [], legal: [], audits: []
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -121,469 +156,487 @@ export const Dashboard = () => {
           moduleService.getAll('inspection-records'),
           moduleService.getAll('emergency-drills'),
           moduleService.getAll('legal-compliance'),
-          moduleService.getAll('audit-management')
+          moduleService.getAll('audit-management'),
         ]);
 
         const applyFilters = (data: any[]) => {
-          let filtered = [...data];
-          if (filters.department && filters.department !== 'All') {
-            filtered = filtered.filter(d => d.department_id === filters.department);
-          }
-          if (filters.year && filters.year !== 'All') {
-            filtered = filtered.filter(d => d.date?.startsWith(filters.year) || d.target_date?.startsWith(filters.year));
-          }
-          if (filters.fromDate) {
-            filtered = filtered.filter(d => {
-              const recordDate = d.date || d.target_date;
-              return recordDate && recordDate >= filters.fromDate;
-            });
-          }
-          if (filters.toDate) {
-            filtered = filtered.filter(d => {
-              const recordDate = d.date || d.target_date;
-              return recordDate && recordDate <= filters.toDate;
-            });
-          }
-          return filtered;
+          let f = [...data];
+          if (filters.department && filters.department !== 'All')
+            f = f.filter(d => d.department_id === filters.department);
+          if (filters.year && filters.year !== 'All')
+            f = f.filter(d => d.date?.startsWith(filters.year) || d.target_date?.startsWith(filters.year));
+          if (filters.fromDate)
+            f = f.filter(d => { const dt = d.date || d.target_date; return dt && dt >= filters.fromDate; });
+          if (filters.toDate)
+            f = f.filter(d => { const dt = d.date || d.target_date; return dt && dt <= filters.toDate; });
+          return f;
         };
 
-        // Keep original state for existing charts/tabs to work without refactoring everything
         setHazards(applyFilters(hRes.data));
         setNearMisses(applyFilters(nmRes.data));
         setIncidents(applyFilters(incRes.data));
         setCapas(applyFilters(capRes.data));
         setTraining(applyFilters(trRes.data));
 
-        // Set raw data for new detail views
         setRawData({
-          hazards: applyFilters(hRes.data),
-          nearMisses: applyFilters(nmRes.data),
-          incidents: applyFilters(incRes.data),
-          capas: applyFilters(capRes.data),
-          training: applyFilters(trRes.data),
-          inspections: applyFilters(insRes.data),
-          audits: applyFilters(audRes.data),
-          drills: applyFilters(drRes.data),
-          legal: applyFilters(legRes.data),
-          totalOrgManhours: 500000 // Placeholder until setting is available
+          hazards:      applyFilters(hRes.data),
+          nearMisses:   applyFilters(nmRes.data),
+          incidents:    applyFilters(incRes.data),
+          capas:        applyFilters(capRes.data),
+          training:     applyFilters(trRes.data),
+          inspections:  applyFilters(insRes.data),
+          audits:       applyFilters(audRes.data),
+          drills:       applyFilters(drRes.data),
+          legal:        applyFilters(legRes.data),
+          totalOrgManhours: 500000,
         });
       } catch (err) {
-        console.error("Failed to load dashboard data", err);
+        console.error('Dashboard fetch error:', err);
       } finally {
         setLoading(false);
       }
     };
-    
     fetchData();
   }, [filters]);
 
   const { leadingMetricsDetail, laggingMetricsDetail } = useDashboardMetrics(rawData);
 
+  // ===== KPI Computations (unchanged business logic) =====
+  const isThisMonth = (dateStr: string) => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr), now = new Date();
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  };
+
+  const totalIncidents       = incidents.length;
+  const ltiCases             = incidents.filter(i => i.incident_category_id === 'LTI').length;
+  const firstAidCases        = incidents.filter(i => i.incident_category_id === 'First Aid').length;
+  const mtcCases             = incidents.filter(i => i.incident_category_id === 'MTC').length;
+  const rwcCases             = incidents.filter(i => i.incident_category_id === 'RWC').length;
+  const fatalities           = incidents.filter(i => i.incident_category_id === 'Fatality').length;
+  const minorFires           = incidents.filter(i => i.incident_category_id === 'Minor Fire').length;
+  const incidentsThisMonth   = incidents.filter(i => isThisMonth(i.date)).length;
+  const openIncidents        = incidents.filter(i => ['Open', 'Pending', 'Work in Progress'].includes(i.status_id)).length;
+  const closedIncidents      = incidents.filter(i => i.status_id === 'Close' || i.status_id === 'Closed').length;
+
+  const totalHazards         = hazards.length;
+  const openHazards          = hazards.filter(h => ['Open', 'Pending', 'Work in Progress'].includes(h.status_id)).length;
+  const closedHazards        = hazards.filter(h => h.status_id === 'Close' || h.status_id === 'Closed').length;
+  const highCriticalHazards  = hazards.filter(h => ['High', 'Critical'].includes(h.risk_rating_id)).length;
+  const hazardsThisMonth     = hazards.filter(h => isThisMonth(h.date)).length;
+
+  const totalNearMisses      = nearMisses.length;
+  const nearMissesThisMonth  = nearMisses.filter(nm => isThisMonth(nm.date)).length;
+  const pendingInvNM         = nearMisses.filter(nm => nm.investigation_required === 'Yes' && !['Close','Closed'].includes(nm.status_id)).length;
+
+  const totalTrainingSessions  = training.length;
+  const trainingsThisMonth     = training.filter(t => isThisMonth(t.date)).length;
+  const totalTrainingManhours  = Math.round(training.reduce((sum, t) => sum + (Number(t.manhours) || 0), 0));
+
+  const totalOpenCapas   = capas.filter(c => ['Open', 'Pending', 'Work in Progress'].includes(c.status_id)).length;
+  const totalClosedCapas = capas.filter(c => c.status_id === 'Close' || c.status_id === 'Closed').length;
+  const overdueCapas     = capas.filter(c => {
+    if (['Close','Closed'].includes(c.status_id)) return false;
+    if (!c.due_date) return false;
+    return new Date(c.due_date) < new Date();
+  }).length;
+  const closureRateCAPA  = capas.length > 0 ? Math.round((totalClosedCapas / capas.length) * 100) : 0;
+
+  // ===== Chart Data (unchanged) =====
+  const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const trendData = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(); d.setMonth(d.getMonth() - i);
+    const m = d.getMonth(), y = d.getFullYear();
+    trendData.push({
+      name: monthNames[m],
+      Incidents:    incidents.filter(x => { const dt = new Date(x.date); return dt.getMonth()===m && dt.getFullYear()===y; }).length,
+      Hazards:      hazards.filter(x => { const dt = new Date(x.date); return dt.getMonth()===m && dt.getFullYear()===y; }).length,
+      'Near Misses': nearMisses.filter(x => { const dt = new Date(x.date); return dt.getMonth()===m && dt.getFullYear()===y; }).length,
+    });
+  }
+
+  const capaStatusData = [
+    { name: 'Open (In Time)', value: totalOpenCapas - overdueCapas },
+    { name: 'Closed',         value: totalClosedCapas },
+    { name: 'Overdue',        value: overdueCapas },
+  ];
+
+  const incDeptData = Object.entries(
+    incidents.reduce((acc, c) => { if (c.department_id) acc[c.department_id] = (acc[c.department_id]||0)+1; return acc; }, {} as Record<string,number>)
+  ).map(([name, count]) => ({ name, count })).sort((a,b)=>b.count-a.count).slice(0,7);
+
+  const hazCatData = Object.entries(
+    hazards.reduce((acc, c) => { if (c.hazard_category_id) acc[c.hazard_category_id] = (acc[c.hazard_category_id]||0)+1; return acc; }, {} as Record<string,number>)
+  ).map(([name, count]) => ({ name, count })).sort((a,b)=>b.count-a.count).slice(0,6);
+
+  const trDeptData = Object.entries(
+    training.reduce((acc, c) => { if (c.department_id) acc[c.department_id] = (acc[c.department_id]||0)+(Number(c.manhours)||0); return acc; }, {} as Record<string,number>)
+  ).map(([name, count]) => ({ name, count: Math.round(count) })).sort((a,b)=>b.count-a.count).slice(0,7);
+
+  const incCatData = Object.entries(
+    incidents.reduce((acc, c) => { if (c.incident_category_id) acc[c.incident_category_id]=(acc[c.incident_category_id]||0)+1; return acc; }, {} as Record<string,number>)
+  ).map(([name, value]) => ({ name, value }));
+
+  const riskData = Object.entries(
+    hazards.reduce((acc, c) => { if (c.risk_rating_id) acc[c.risk_rating_id]=(acc[c.risk_rating_id]||0)+1; return acc; }, {} as Record<string,number>)
+  ).map(([name, value]) => ({ name, value }));
+
   if (loading) {
     return (
       <Layout>
-        <div className="flex items-center justify-center h-full min-h-[400px]">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
+          <RefreshCw className="h-8 w-8 text-[#CB0017] animate-spin" />
+          <p className="text-[13px] text-[#6B7280]">Loading dashboard data…</p>
         </div>
       </Layout>
     );
   }
 
-  // --- Helper to check if a date is this month ---
-  const isThisMonth = (dateStr: string) => {
-    if (!dateStr) return false;
-    const d = new Date(dateStr);
-    const now = new Date();
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  };
-
-  // --- KPI COMPUTATIONS ---
-  
-  // Incidents
-  const totalIncidents = incidents.length;
-  const firstAidCases = incidents.filter(i => i.incident_category_id === 'First Aid').length;
-  const mtcCases = incidents.filter(i => i.incident_category_id === 'MTC').length;
-  const ltiCases = incidents.filter(i => i.incident_category_id === 'LTI').length;
-  const rwcCases = incidents.filter(i => i.incident_category_id === 'RWC').length;
-  const fatalities = incidents.filter(i => i.incident_category_id === 'Fatality').length;
-  const minorFires = incidents.filter(i => i.incident_category_id === 'Minor Fire').length;
-  const incidentsThisMonth = incidents.filter(i => isThisMonth(i.date)).length;
-  const openIncidents = incidents.filter(i => ['Open', 'Pending', 'Work in Progress'].includes(i.status_id)).length;
-  const closedIncidents = incidents.filter(i => i.status_id === 'Close' || i.status_id === 'Closed').length;
-
-  // Hazards
-  const totalHazards = hazards.length;
-  const openHazards = hazards.filter(h => ['Open', 'Pending', 'Work in Progress'].includes(h.status_id)).length;
-  const closedHazards = hazards.filter(h => h.status_id === 'Close' || h.status_id === 'Closed').length;
-  const highCriticalHazards = hazards.filter(h => ['High', 'Critical'].includes(h.risk_rating_id)).length;
-  const hazardsThisMonth = hazards.filter(h => isThisMonth(h.date)).length;
-
-  // Near Misses
-  const totalNearMisses = nearMisses.length;
-  const nearMissesThisMonth = nearMisses.filter(nm => isThisMonth(nm.date)).length;
-  const pendingInvNearMisses = nearMisses.filter(nm => nm.investigation_required === 'Yes' && !['Close', 'Closed'].includes(nm.status_id)).length;
-
-  // Training
-  const totalTrainingSessions = training.length;
-  const trainingsThisMonth = training.filter(t => isThisMonth(t.date)).length;
-  const totalTrainingManhours = Math.round(training.reduce((sum, t) => sum + (Number(t.manhours) || 0), 0));
-
-  // CAPA
-  const totalOpenCapas = capas.filter(c => ['Open', 'Pending', 'Work in Progress'].includes(c.status_id)).length;
-  const totalClosedCapas = capas.filter(c => c.status_id === 'Close' || c.status_id === 'Closed').length;
-  const overdueCapas = capas.filter(c => {
-    if (['Close', 'Closed'].includes(c.status_id)) return false;
-    if (!c.due_date) return false;
-    return new Date(c.due_date) < new Date();
-  }).length;
-  const closureRateCAPA = capas.length > 0 ? Math.round((totalClosedCapas / capas.length) * 100) : 0;
-
-
-  // --- CHART DATA PREPARATION ---
-  
-  // 1. Monthly Trend Lines (Last 6 months)
-  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const trendData = [];
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date();
-    d.setMonth(d.getMonth() - i);
-    const m = d.getMonth();
-    const y = d.getFullYear();
-    
-    const incCount = incidents.filter(inc => { const dt = new Date(inc.date); return dt.getMonth() === m && dt.getFullYear() === y; }).length;
-    const hazCount = hazards.filter(h => { const dt = new Date(h.date); return dt.getMonth() === m && dt.getFullYear() === y; }).length;
-    const nmCount = nearMisses.filter(nm => { const dt = new Date(nm.date); return dt.getMonth() === m && dt.getFullYear() === y; }).length;
-    
-    trendData.push({ name: monthNames[m], Incidents: incCount, Hazards: hazCount, 'Near Misses': nmCount });
-  }
-
-  // 2. CAPA Status (Open, Closed, Overdue)
-  const capaStatusData = [
-    { name: 'Open (In Time)', value: totalOpenCapas - overdueCapas },
-    { name: 'Closed', value: totalClosedCapas },
-    { name: 'Overdue', value: overdueCapas }
-  ];
-
-  // 3. Dept-wise Incident Count
-  const incDeptCounts = incidents.reduce((acc, curr) => {
-    if (curr.department_id) acc[curr.department_id] = (acc[curr.department_id] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-  const incDeptData = Object.keys(incDeptCounts).map(k => ({ name: k, count: incDeptCounts[k] })).sort((a,b) => b.count - a.count).slice(0, 7);
-
-  // 4. Hazard Category Distribution
-  const hazCatCounts = hazards.reduce((acc, curr) => {
-    if (curr.hazard_category_id) acc[curr.hazard_category_id] = (acc[curr.hazard_category_id] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-  const hazCatData = Object.keys(hazCatCounts).map(k => ({ name: k, count: hazCatCounts[k] })).sort((a,b) => b.count - a.count).slice(0, 5);
-
-  // 5. Training Manhours by Department
-  const trDeptHours = training.reduce((acc, curr) => {
-    if (curr.department_id) acc[curr.department_id] = (acc[curr.department_id] || 0) + (Number(curr.manhours) || 0);
-    return acc;
-  }, {} as Record<string, number>);
-  const trDeptData = Object.keys(trDeptHours).map(k => ({ name: k, count: Math.round(trDeptHours[k]) })).sort((a,b) => b.count - a.count).slice(0, 7);
-
-  // 6. Incident Category Breakdown
-  const incCatCounts = incidents.reduce((acc, curr) => {
-    if (curr.incident_category_id) acc[curr.incident_category_id] = (acc[curr.incident_category_id] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-  const incCatData = Object.keys(incCatCounts).map(k => ({ name: k, value: incCatCounts[k] }));
-
-  // 7. Risk Rating Distribution (Hazards & Incidents combined, or just Hazards)
-  // According to RED, it doesn't specify, but Risk Rating usually applies to both. Let's use Hazards for this chart to ensure data variety.
-  const riskCounts = hazards.reduce((acc, curr) => {
-    if (curr.risk_rating_id) acc[curr.risk_rating_id] = (acc[curr.risk_rating_id] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-  const riskData = Object.keys(riskCounts).map(k => ({ name: k, value: riskCounts[k] }));
+  // ===== Enterprise chart axis/grid styles =====
+  const axisStyle = { fontSize: 11, fill: '#9CA3AF' };
+  const gridStyle = { stroke: '#F0F0F0', strokeDasharray: '4 4' };
 
   return (
     <Layout>
-      <div className="space-y-8 animate-in fade-in duration-500 pb-12">
-        
-        {/* Leading vs Lagging Summary Panel (Compliant with Section 12.6) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          {/* LEADING INDICATORS CARD */}
-          <div 
-            onClick={() => setIsLeadingOpen(true)}
-            className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/30 rounded-xl p-6 flex flex-col justify-center items-center text-center cursor-pointer group hover:bg-emerald-100 dark:hover:bg-emerald-900/30 hover:shadow-md transition-all relative overflow-hidden"
-          >
-            <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center text-emerald-700 dark:text-emerald-400 text-xs font-semibold">
-              Full Breakdown <ArrowRight className="w-4 h-4 ml-1" />
-            </div>
-            <h2 className="text-xl font-bold text-emerald-700 dark:text-emerald-400 mb-2 flex items-center gap-2 group-hover:scale-105 transition-transform"><CheckCircle2 className="h-6 w-6"/> Leading Indicators</h2>
-            <p className="text-sm text-emerald-600 dark:text-emerald-500 mb-4">Proactive measures to prevent incidents</p>
-            <div className="flex gap-6 mt-2">
-              <div>
-                <p className="text-2xl font-bold text-foreground">{totalHazards}</p>
-                <p className="text-xs text-muted-foreground">Hazards Reported</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">{totalTrainingManhours}</p>
-                <p className="text-xs text-muted-foreground">Training Hours</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-success">{closureRateCAPA}%</p>
-                <p className="text-xs text-muted-foreground">CAPA Closure</p>
-              </div>
-            </div>
-          </div>
-          
-          {/* LAGGING INDICATORS CARD */}
-          <div 
-            onClick={() => setIsLaggingOpen(true)}
-            className="bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-800/30 rounded-xl p-6 flex flex-col justify-center items-center text-center cursor-pointer group hover:bg-rose-100 dark:hover:bg-rose-900/30 hover:shadow-md transition-all relative overflow-hidden"
-          >
-            <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center text-rose-700 dark:text-rose-400 text-xs font-semibold">
-              Full Breakdown <ArrowRight className="w-4 h-4 ml-1" />
-            </div>
-            <h2 className="text-xl font-bold text-rose-700 dark:text-rose-400 mb-2 flex items-center gap-2 group-hover:scale-105 transition-transform"><AlertCircle className="h-6 w-6"/> Lagging Indicators</h2>
-            <p className="text-sm text-rose-600 dark:text-rose-500 mb-4">Reactive measures from past incidents</p>
-            <div className="flex gap-6 mt-2">
-              <div>
-                <p className="text-2xl font-bold text-foreground">{totalIncidents}</p>
-                <p className="text-xs text-muted-foreground">Total Incidents</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">{ltiCases}</p>
-                <p className="text-xs text-muted-foreground">LTI</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">{firstAidCases}</p>
-                <p className="text-xs text-muted-foreground">First Aid</p>
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* Context Header */}
+      <ContextHeader
+        title="Executive Dashboard"
+        breadcrumbs={['Dashboard']}
+        subtitle={`Showing data for ${filters.department !== 'All' ? filters.department : 'all departments'} · ${filters.year !== 'All' ? filters.year : 'all time'}`}
+      >
+        <FilterBar />
+      </ContextHeader>
 
-        {/* Tabbed KPI Section (Compliant with Sections 12.1 - 12.5) */}
-        <div className="space-y-4">
-          <div className="flex border-b border-border overflow-x-auto hide-scrollbar">
-            {['Incidents', 'Hazards', 'Near Misses', 'Training', 'CAPA'].map(tab => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-6 py-3 font-semibold text-sm whitespace-nowrap transition-colors border-b-2 ${
-                  activeTab === tab 
-                    ? 'border-primary text-primary bg-primary/5' 
-                    : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                }`}
-              >
-                {tab} KPIs
-              </button>
-            ))}
-          </div>
+      <div className="p-6 space-y-6">
 
-          <div className="pt-2">
-            {activeTab === 'Incidents' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                <StatCard onClick={() => navigate('/incident-log')} title="Total Incidents" value={totalIncidents} icon={<AlertTriangle />} color={CHART_COLORS.danger} />
-                <StatCard onClick={() => navigate('/incident-log')} title="This Month" value={incidentsThisMonth} icon={<Calendar />} color={CHART_COLORS.info} />
-                <StatCard onClick={() => navigate('/incident-log')} title="Open Incidents" value={openIncidents} icon={<ListTodo />} color={CHART_COLORS.warning} />
-                <StatCard onClick={() => navigate('/incident-log')} title="Closed Incidents" value={closedIncidents} icon={<CheckCircle2 />} color={CHART_COLORS.success} />
-                <StatCard onClick={() => navigate('/incident-log')} title="First Aid Cases" value={firstAidCases} icon={<HeartPulse />} color={CHART_COLORS.mutedGreen} />
-                <StatCard onClick={() => navigate('/incident-log')} title="MTC Cases" value={mtcCases} icon={<Activity />} color={CHART_COLORS.amber} />
-                <StatCard onClick={() => navigate('/incident-log')} title="LTI Cases" value={ltiCases} icon={<TrendingUp />} color={CHART_COLORS.danger} />
-                <StatCard onClick={() => navigate('/incident-log')} title="RWC Cases" value={rwcCases} icon={<ListTodo />} color={CHART_COLORS.caramel} />
-                <StatCard onClick={() => navigate('/incident-log')} title="Fatalities" value={fatalities} icon={<AlertCircle />} color={CHART_COLORS.darkBrown} />
-                <StatCard onClick={() => navigate('/incident-log')} title="Minor Fire" value={minorFires} icon={<Flame />} color={CHART_COLORS.danger} />
-              </div>
-            )}
-
-            {activeTab === 'Hazards' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                <StatCard onClick={() => navigate('/hazard-reporting')} title="Total Hazards" value={totalHazards} icon={<FileWarning />} color={CHART_COLORS.amber} />
-                <StatCard onClick={() => navigate('/hazard-reporting')} title="This Month" value={hazardsThisMonth} icon={<Calendar />} color={CHART_COLORS.info} />
-                <StatCard onClick={() => navigate('/hazard-reporting')} title="Open Hazards" value={openHazards} icon={<ListTodo />} color={CHART_COLORS.warning} />
-                <StatCard onClick={() => navigate('/hazard-reporting')} title="Closed Hazards" value={closedHazards} icon={<CheckCircle2 />} color={CHART_COLORS.success} />
-                <StatCard onClick={() => navigate('/hazard-reporting')} title="High/Critical Risk" value={highCriticalHazards} icon={<ShieldAlert />} color={CHART_COLORS.danger} />
-              </div>
-            )}
-
-            {activeTab === 'Near Misses' && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <StatCard onClick={() => navigate('/near-miss')} title="Total Near Misses" value={totalNearMisses} icon={<Search />} color={CHART_COLORS.info} />
-                <StatCard onClick={() => navigate('/near-miss')} title="This Month" value={nearMissesThisMonth} icon={<Calendar />} color={CHART_COLORS.mutedGreen} />
-                <StatCard onClick={() => navigate('/near-miss')} title="Pending Investigation" value={pendingInvNearMisses} icon={<Clock />} color={CHART_COLORS.warning} />
-              </div>
-            )}
-
-            {activeTab === 'Training' && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <StatCard onClick={() => navigate('/training-records')} title="Total Sessions" value={totalTrainingSessions} icon={<BookOpen />} color={CHART_COLORS.success} />
-                <StatCard onClick={() => navigate('/training-records')} title="This Month" value={trainingsThisMonth} icon={<Calendar />} color={CHART_COLORS.info} />
-                <StatCard onClick={() => navigate('/training-records')} title="Total Manhours" value={totalTrainingManhours} icon={<Users />} color={CHART_COLORS.caramel} />
-              </div>
-            )}
-
-            {activeTab === 'CAPA' && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <StatCard onClick={() => navigate('/action-tracker')} title="Open CAPAs" value={totalOpenCapas} icon={<ListTodo />} color={CHART_COLORS.warning} />
-                <StatCard onClick={() => navigate('/action-tracker')} title="Closed CAPAs" value={totalClosedCapas} icon={<CheckCircle2 />} color={CHART_COLORS.success} />
-                <StatCard onClick={() => navigate('/action-tracker')} title="Overdue CAPAs" value={overdueCapas} icon={<Timer />} color={CHART_COLORS.danger} />
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* --- CHARTS SECTION (Compliant with Section 12.6) --- */}
-        
-        {/* Trend Line Chart - Full Width */}
-        <div className="bg-card p-5 rounded-xl border border-border card-shadow">
-          <h3 className="text-lg font-semibold text-foreground mb-6">Monthly Trends (Incidents, Hazards, Near Misses)</h3>
-          <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trendData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5DFD3" opacity={0.5} />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6E5A4E' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6E5A4E' }} />
-                <RechartsTooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e5dfd3' }} />
-                <Legend iconType="circle" />
-                <Line type="monotone" dataKey="Incidents" stroke={CHART_COLORS.danger} strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                <Line type="monotone" dataKey="Hazards" stroke={CHART_COLORS.amber} strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                <Line type="monotone" dataKey="Near Misses" stroke={CHART_COLORS.info} strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Row 2: Bar Charts (3-col grid) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="bg-card p-5 rounded-xl border border-border card-shadow">
-            <h3 className="text-sm font-semibold text-foreground mb-4 text-center">Department-wise Incidents</h3>
-            <div className="h-[250px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={incDeptData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5DFD3" opacity={0.5} />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11 }} />
-                  <RechartsTooltip cursor={{fill: 'rgba(0,0,0,0.05)'}} />
-                  <Bar dataKey="count" fill={CHART_COLORS.danger} radius={[4, 4, 0, 0]} barSize={25} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          <div className="bg-card p-5 rounded-xl border border-border card-shadow">
-            <h3 className="text-sm font-semibold text-foreground mb-4 text-center">Hazard Categories (Top 5)</h3>
-            <div className="h-[250px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={hazCatData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5DFD3" opacity={0.5} />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11 }} />
-                  <RechartsTooltip cursor={{fill: 'rgba(0,0,0,0.05)'}} />
-                  <Bar dataKey="count" fill={CHART_COLORS.amber} radius={[4, 4, 0, 0]} barSize={25} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          <div className="bg-card p-5 rounded-xl border border-border card-shadow">
-            <h3 className="text-sm font-semibold text-foreground mb-4 text-center">Training Manhours by Dept</h3>
-            <div className="h-[250px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={trDeptData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5DFD3" opacity={0.5} />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11 }} />
-                  <RechartsTooltip cursor={{fill: 'rgba(0,0,0,0.05)'}} />
-                  <Bar dataKey="count" fill={CHART_COLORS.success} radius={[4, 4, 0, 0]} barSize={25} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-
-        {/* Row 3: Pie/Donut Charts (3-col grid) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          <div 
+        {/* ============ ROW 1 — KPI TILES ============ */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          <KpiTile
+            label="Total Incidents"
+            value={totalIncidents}
+            accent="danger"
+            icon={<AlertTriangle />}
+            trendLabel="total reported"
             onClick={() => navigate('/incident-log')}
-            className="bg-card p-5 rounded-xl border border-border card-shadow cursor-pointer hover:shadow-md hover:scale-[1.02] hover:bg-muted/30 transition-all"
-          >
-            <h3 className="text-sm font-semibold text-foreground mb-2 text-center">Incident Categories</h3>
-            <div className="h-[220px]">
-              <DonutChartWithLegend data={incCatData} colors={PIE_COLORS} size="sm" />
-            </div>
-          </div>
-
-          <div 
-            onClick={() => navigate('/hazard-reporting')}
-            className="bg-card p-5 rounded-xl border border-border card-shadow cursor-pointer hover:shadow-md hover:scale-[1.02] hover:bg-muted/30 transition-all"
-          >
-            <h3 className="text-sm font-semibold text-foreground mb-2 text-center">Hazard Risk Ratings</h3>
-            <div className="h-[220px]">
-              <DonutChartWithLegend data={riskData} colors={PIE_COLORS_RISK} size="sm" />
-            </div>
-          </div>
-
-          <div 
+          />
+          <KpiTile
+            label="Open CAPAs"
+            value={totalOpenCapas}
+            accent="warning"
+            icon={<ListTodo />}
+            trendLabel="require action"
             onClick={() => navigate('/action-tracker')}
-            className="bg-card p-5 rounded-xl border border-border card-shadow cursor-pointer hover:shadow-md hover:scale-[1.02] hover:bg-muted/30 transition-all"
-          >
-            <h3 className="text-sm font-semibold text-foreground mb-2 text-center">CAPA Status</h3>
-            <div className="h-[220px]">
-              <DonutChartWithLegend data={capaStatusData} colors={PIE_COLORS_STATUS} size="sm" />
-            </div>
-          </div>
+          />
+          <KpiTile
+            label="Overdue Actions"
+            value={overdueCapas}
+            accent={overdueCapas > 0 ? 'danger' : 'success'}
+            icon={<Timer />}
+            trendLabel="past due date"
+            onClick={() => navigate('/action-tracker')}
+          />
+          <KpiTile
+            label="Training Manhours"
+            value={totalTrainingManhours}
+            unit="hrs"
+            accent="success"
+            icon={<BookOpen />}
+            trendLabel="logged to date"
+            onClick={() => navigate('/training-records')}
+          />
+          <KpiTile
+            label="High-Risk Hazards"
+            value={highCriticalHazards}
+            accent={highCriticalHazards > 0 ? 'warning' : 'success'}
+            icon={<ShieldAlert />}
+            trendLabel="high & critical"
+            onClick={() => navigate('/hazard-reporting')}
+          />
+          <KpiTile
+            label="CAPA Closure Rate"
+            value={closureRateCAPA}
+            unit="%"
+            accent={closureRateCAPA >= 80 ? 'success' : closureRateCAPA >= 50 ? 'warning' : 'danger'}
+            icon={<CheckCircle2 />}
+            trendLabel="of total CAPAs"
+            onClick={() => navigate('/action-tracker')}
+          />
+        </div>
 
+        {/* ============ ROW 2 — Leading / Lagging Summary ============ */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Leading Indicators */}
+          <Panel className="p-5">
+            <SectionHeader
+              title="Leading Indicators"
+              onViewAll={() => setIsLeadingOpen(true)}
+            />
+            <div className="grid grid-cols-3 gap-4">
+              {[
+                { label: 'Hazards Reported', value: totalHazards,          icon: FileWarning,   path: '/hazard-reporting' },
+                { label: 'Training Sessions', value: totalTrainingSessions, icon: Users,          path: '/training-records' },
+                { label: 'CAPA Closure',      value: `${closureRateCAPA}%`, icon: CheckCircle2, path: '/action-tracker'   },
+              ].map(({ label, value, icon: Icon, path }) => (
+                <div
+                  key={label}
+                  onClick={() => navigate(path)}
+                  className="flex flex-col items-center text-center cursor-pointer p-3 rounded-lg hover:bg-[#F9FAFB] transition-colors border border-[#F0F0F0]"
+                >
+                  <Icon className="h-5 w-5 text-[#1B7C1B] mb-2" />
+                  <p className="text-[20px] font-bold text-[#1A1818] tabular-nums">{value}</p>
+                  <p className="text-[11px] text-[#6B7280] mt-0.5 leading-tight">{label}</p>
+                </div>
+              ))}
+            </div>
+          </Panel>
+
+          {/* Lagging Indicators */}
+          <Panel className="p-5">
+            <SectionHeader
+              title="Lagging Indicators"
+              onViewAll={() => setIsLaggingOpen(true)}
+            />
+            <div className="grid grid-cols-4 gap-3">
+              {[
+                { label: 'Total',     value: totalIncidents, color: '#6B7280' },
+                { label: 'First Aid', value: firstAidCases,  color: '#DC8E00' },
+                { label: 'LTI',       value: ltiCases,       color: '#CB0017' },
+                { label: 'Fatality',  value: fatalities,     color: '#7F1D1D' },
+              ].map(({ label, value, color }) => (
+                <div
+                  key={label}
+                  onClick={() => navigate('/incident-log')}
+                  className="flex flex-col items-center text-center cursor-pointer p-3 rounded-lg hover:bg-[#F9FAFB] transition-colors border border-[#F0F0F0]"
+                >
+                  <p className="text-[22px] font-bold tabular-nums" style={{ color }}>{value}</p>
+                  <p className="text-[11px] text-[#6B7280] mt-0.5">{label}</p>
+                </div>
+              ))}
+            </div>
+          </Panel>
+        </div>
+
+        {/* ============ ROW 3 — TREND CHART + CAPA DONUT ============ */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+          {/* Safety Trends (60%) */}
+          <Panel className="lg:col-span-3 p-5">
+            <SectionHeader title="Safety Trends — Last 6 Months" />
+            {/* Legend */}
+            <div className="flex items-center gap-4 mb-4">
+              {[
+                { label: 'Incidents',   color: CHART_COLORS.danger },
+                { label: 'Hazards',     color: CHART_COLORS.amber  },
+                { label: 'Near Misses', color: CHART_COLORS.info   },
+              ].map(({ label, color }) => (
+                <div key={label} className="flex items-center gap-1.5">
+                  <span className="inline-block w-3 h-0.5 rounded" style={{ backgroundColor: color }} />
+                  <span className="text-[11px] text-[#6B7280]">{label}</span>
+                </div>
+              ))}
+            </div>
+            <div className="h-[240px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={trendData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                  <CartesianGrid vertical={false} {...gridStyle} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={axisStyle} />
+                  <YAxis axisLine={false} tickLine={false} tick={axisStyle} />
+                  <RechartsTooltip content={<EnterpriseTooltip />} />
+                  <Line type="monotone" dataKey="Incidents"   stroke={CHART_COLORS.danger} strokeWidth={2.5} dot={false} activeDot={{ r: 5, strokeWidth: 0 }} />
+                  <Line type="monotone" dataKey="Hazards"     stroke={CHART_COLORS.amber}  strokeWidth={2.5} dot={false} activeDot={{ r: 5, strokeWidth: 0 }} />
+                  <Line type="monotone" dataKey="Near Misses" stroke={CHART_COLORS.info}   strokeWidth={2.5} dot={false} activeDot={{ r: 5, strokeWidth: 0 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </Panel>
+
+          {/* CAPA Status Donut (40%) */}
+          <Panel className="lg:col-span-2 p-5">
+            <SectionHeader title="CAPA Status Distribution" onViewAll={() => navigate('/action-tracker')} />
+            <div className="h-[240px] flex items-center justify-center">
+              {capas.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={capaStatusData}
+                      cx="50%" cy="50%"
+                      innerRadius={65} outerRadius={95}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {capaStatusData.map((_, i) => (
+                        <Cell key={i} fill={PIE_COLORS_STATUS[i % PIE_COLORS_STATUS.length]} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip content={<EnterpriseTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-center">
+                  <CheckCircle2 className="h-12 w-12 text-[#E0E0E0] mx-auto mb-2" />
+                  <p className="text-[13px] text-[#9CA3AF]">No CAPA data</p>
+                </div>
+              )}
+            </div>
+            {/* Donut Legend */}
+            <div className="flex flex-col gap-1.5 mt-2">
+              {capaStatusData.map((entry, i) => (
+                <div key={entry.name} className="flex items-center justify-between text-[12px]">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: PIE_COLORS_STATUS[i % PIE_COLORS_STATUS.length] }} />
+                    <span className="text-[#374151]">{entry.name}</span>
+                  </div>
+                  <span className="font-semibold text-[#1A1818] tabular-nums">{entry.value}</span>
+                </div>
+              ))}
+            </div>
+          </Panel>
+        </div>
+
+        {/* ============ ROW 4 — BAR CHARTS ============ */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Department Incidents */}
+          <Panel className="p-5">
+            <SectionHeader title="Incidents by Department" onViewAll={() => navigate('/incident-log')} />
+            <div className="h-[220px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={incDeptData} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
+                  <CartesianGrid vertical={false} {...gridStyle} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ ...axisStyle, fontSize: 10 }} />
+                  <YAxis axisLine={false} tickLine={false} tick={axisStyle} />
+                  <RechartsTooltip content={<EnterpriseTooltip />} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
+                  <Bar dataKey="count" name="Incidents" fill={CHART_COLORS.danger} radius={[3,3,0,0]} barSize={22} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Panel>
+
+          {/* Top Hazard Categories */}
+          <Panel className="p-5">
+            <SectionHeader title="Top Hazard Categories" onViewAll={() => navigate('/hazard-reporting')} />
+            <div className="h-[220px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={hazCatData} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
+                  <CartesianGrid vertical={false} {...gridStyle} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ ...axisStyle, fontSize: 10 }} />
+                  <YAxis axisLine={false} tickLine={false} tick={axisStyle} />
+                  <RechartsTooltip content={<EnterpriseTooltip />} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
+                  <Bar dataKey="count" name="Hazards" fill={CHART_COLORS.amber} radius={[3,3,0,0]} barSize={22} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Panel>
+
+          {/* Training Hours by Dept */}
+          <Panel className="p-5">
+            <SectionHeader title="Training Manhours by Dept" onViewAll={() => navigate('/training-records')} />
+            <div className="h-[220px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={trDeptData} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
+                  <CartesianGrid vertical={false} {...gridStyle} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ ...axisStyle, fontSize: 10 }} />
+                  <YAxis axisLine={false} tickLine={false} tick={axisStyle} />
+                  <RechartsTooltip content={<EnterpriseTooltip />} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
+                  <Bar dataKey="count" name="Hours" fill={CHART_COLORS.success} radius={[3,3,0,0]} barSize={22} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Panel>
+        </div>
+
+        {/* ============ ROW 5 — DISTRIBUTION PIE CHARTS ============ */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {[
+            { title: 'Incident Categories', data: incCatData,    colors: PIE_COLORS,        path: '/incident-log'      },
+            { title: 'Hazard Risk Ratings', data: riskData,      colors: PIE_COLORS_RISK,   path: '/hazard-reporting'  },
+          ].map(({ title, data, colors, path }) => (
+            <Panel key={title} className="p-5">
+              <SectionHeader title={title} onViewAll={() => navigate(path)} />
+              <div className="h-[200px]">
+                {data.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={data} cx="50%" cy="50%" innerRadius={55} outerRadius={80} paddingAngle={2} dataKey="value">
+                        {data.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} />)}
+                      </Pie>
+                      <RechartsTooltip content={<EnterpriseTooltip />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-[13px] text-[#9CA3AF]">No data available</p>
+                  </div>
+                )}
+              </div>
+              {/* Compact legend */}
+              <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+                {data.slice(0,5).map((entry, i) => (
+                  <div key={entry.name} className="flex items-center gap-1.5 text-[11px] text-[#6B7280]">
+                    <span className="w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: colors[i % colors.length] }} />
+                    {entry.name} ({entry.value})
+                  </div>
+                ))}
+              </div>
+            </Panel>
+          ))}
+
+          {/* Recent Incidents Quick View */}
+          <Panel className="p-5">
+            <SectionHeader title="Recent Incidents" onViewAll={() => navigate('/incident-log')} />
+            {incidents.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <CheckCircle2 className="h-10 w-10 text-[#1B7C1B] mb-2 opacity-60" />
+                <p className="text-[13px] font-medium text-[#374151]">No incidents recorded</p>
+                <p className="text-[11px] text-[#9CA3AF] mt-0.5">All clear for the selected filters</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {incidents.slice(0,5).map((inc) => (
+                  <div
+                    key={inc.id}
+                    onClick={() => navigate('/incident-log')}
+                    className="flex items-center justify-between gap-3 p-2.5 rounded border border-[#F3F4F6] hover:border-[#E0E0E0] hover:bg-[#FAFAFA] cursor-pointer transition-colors"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-[12px] font-medium text-[#1A1818] truncate">{inc.description || '—'}</p>
+                      <p className="text-[11px] text-[#9CA3AF]">{inc.date} · {inc.department_id}</p>
+                    </div>
+                    <StatusBadge status={inc.status_id || 'Open'} size="xs" />
+                  </div>
+                ))}
+              </div>
+            )}
+          </Panel>
         </div>
 
       </div>
 
-      {/* Centered Modals for Detail Views */}
-      <CenterModal 
-        isOpen={isLeadingOpen} 
-        onClose={() => setIsLeadingOpen(false)} 
-        title="Leading Indicators Breakdown"
-        description="Detailed view of proactive safety measures"
+      {/* ===== Detail Modals ===== */}
+      <CenterModal
+        isOpen={isLeadingOpen}
+        onClose={() => setIsLeadingOpen(false)}
+        title="Leading Indicators — Full Breakdown"
+        description="Proactive safety measures and prevention metrics"
       >
-        <div className="mb-8 h-64 bg-background/50 rounded-xl p-4 border border-border">
-          <DonutChartWithLegend 
-            data={leadingMetricsDetail.map(m => ({ 
-              name: m.name, 
-              value: typeof m.value === 'string' && m.value.includes('/') ? parseFloat(m.value.split('/')[0]) : parseFloat(String(m.value)) || 0
-            }))}
-            colors={PIE_COLORS}
-          />
-        </div>
-        <div className="flex flex-wrap justify-center gap-4">
-          {leadingMetricsDetail.map((metric) => (
-            <div key={metric.id} className="flex-1 min-w-[280px] max-w-[400px] bg-card border border-border/50 rounded-lg shadow-sm">
-              <MetricRow metric={metric} />
-            </div>
+        <div className="bg-white border border-[#E0E0E0] rounded-lg overflow-hidden">
+          {leadingMetricsDetail.map(metric => (
+            <MetricRow key={metric.id} metric={metric} />
           ))}
         </div>
       </CenterModal>
 
-      <CenterModal 
-        isOpen={isLaggingOpen} 
-        onClose={() => setIsLaggingOpen(false)} 
-        title="Lagging Indicators Breakdown"
-        description="Detailed view of reactive safety measures"
+      <CenterModal
+        isOpen={isLaggingOpen}
+        onClose={() => setIsLaggingOpen(false)}
+        title="Lagging Indicators — Full Breakdown"
+        description="Reactive safety measures from past incidents"
       >
-        <div className="mb-8 h-64 bg-background/50 rounded-xl p-4 border border-border">
-          <DonutChartWithLegend 
-            data={laggingMetricsDetail.map(m => ({ 
-              name: m.name, 
-              value: typeof m.value === 'string' && m.value.includes('/') ? parseFloat(m.value.split('/')[0]) : parseFloat(String(m.value)) || 0
-            }))}
-            colors={PIE_COLORS_STATUS}
-          />
-        </div>
-        <div className="flex flex-wrap justify-center gap-4">
-          {laggingMetricsDetail.map((metric) => (
-            <div key={metric.id} className="flex-1 min-w-[280px] max-w-[400px] bg-card border border-border/50 rounded-lg shadow-sm">
-              <MetricRow metric={metric} />
-            </div>
+        <div className="bg-white border border-[#E0E0E0] rounded-lg overflow-hidden">
+          {laggingMetricsDetail.map(metric => (
+            <MetricRow key={metric.id} metric={metric} />
           ))}
         </div>
       </CenterModal>
     </Layout>
   );
 };
-

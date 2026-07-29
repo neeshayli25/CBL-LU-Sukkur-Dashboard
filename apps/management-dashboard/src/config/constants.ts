@@ -61,24 +61,30 @@ export const STATUSES = [
 ];
 
 export const CHART_COLORS = {
-  maroon: '#8C1D2B',
-  amber: '#D9A441',
-  caramel: '#C46A2F',
-  mutedGreen: '#728C69',
-  softGrey: '#A89891',
-  darkBrown: '#2B1B17',
-  danger: '#A7283B',
-  success: '#2E7D32',
-  info: '#1976D2',
-  warning: '#F57F17'
+  // CBL Brand
+  primary:  '#CB0017', // CBL Crimson
+  maroon:   '#6E000C', // Deep Red
+  dark:     '#1A1818', // Charcoal
+  // Semantic enterprise palette (SAP / Microsoft Dynamics)
+  danger:   '#CB0017', // Red — incidents, overdue
+  warning:  '#DC8E00', // Amber — open, pending
+  success:  '#1B7C1B', // Green — closed, compliant
+  info:     '#2563EB', // Blue — in-progress, informational
+  neutral:  '#6B7280', // Grey — neutral
+  amber:    '#DC8E00', // alias for warning
+  // Legacy keys (kept for compatibility)
+  caramel:   '#CB0017',
+  mutedGreen:'#1B7C1B',
+  softGrey:  '#E5E7EB',
+  darkBrown: '#1A1818',
 };
 
-// Common palette array for pie/donut charts
+// Pie chart palette — meaningful color progression
 export const PIE_COLORS = [
-  CHART_COLORS.maroon,
-  CHART_COLORS.amber,
-  CHART_COLORS.caramel,
-  CHART_COLORS.mutedGreen,
-  CHART_COLORS.softGrey,
-  CHART_COLORS.darkBrown,
+  '#CB0017', // Red — critical / high
+  '#DC8E00', // Amber — medium / open
+  '#1B7C1B', // Green — low / closed
+  '#2563EB', // Blue — informational
+  '#6B7280', // Grey — neutral / cancelled
+  '#6E000C', // Deep red — fatality-level
 ];
