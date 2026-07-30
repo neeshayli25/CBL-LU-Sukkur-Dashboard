@@ -17,6 +17,7 @@ import {
   ListTodo, ShieldAlert,
   Users, BookOpen, AlertTriangle, ArrowRight,
   CheckCircle, XCircle, Info, RefreshCw,
+  ChevronUp, ChevronDown,
 } from 'lucide-react';
 import { moduleService }        from '../services/api/moduleService';
 import { CHART_COLORS, PIE_COLORS } from '../config/constants';
@@ -203,35 +204,15 @@ export const Dashboard = () => {
   const { leadingMetricsDetail, laggingMetricsDetail } = useDashboardMetrics(rawData);
 
   // ===== KPI Computations (unchanged business logic) =====
-  const isThisMonth = (dateStr: string) => {
-    if (!dateStr) return false;
-    const d = new Date(dateStr), now = new Date();
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  };
-
   const totalIncidents       = incidents.length;
   const ltiCases             = incidents.filter(i => i.incident_category_id === 'LTI').length;
   const firstAidCases        = incidents.filter(i => i.incident_category_id === 'First Aid').length;
-  const mtcCases             = incidents.filter(i => i.incident_category_id === 'MTC').length;
-  const rwcCases             = incidents.filter(i => i.incident_category_id === 'RWC').length;
   const fatalities           = incidents.filter(i => i.incident_category_id === 'Fatality').length;
-  const minorFires           = incidents.filter(i => i.incident_category_id === 'Minor Fire').length;
-  const incidentsThisMonth   = incidents.filter(i => isThisMonth(i.date)).length;
-  const openIncidents        = incidents.filter(i => ['Open', 'Pending', 'Work in Progress'].includes(i.status_id)).length;
-  const closedIncidents      = incidents.filter(i => i.status_id === 'Close' || i.status_id === 'Closed').length;
 
   const totalHazards         = hazards.length;
-  const openHazards          = hazards.filter(h => ['Open', 'Pending', 'Work in Progress'].includes(h.status_id)).length;
-  const closedHazards        = hazards.filter(h => h.status_id === 'Close' || h.status_id === 'Closed').length;
   const highCriticalHazards  = hazards.filter(h => ['High', 'Critical'].includes(h.risk_rating_id)).length;
-  const hazardsThisMonth     = hazards.filter(h => isThisMonth(h.date)).length;
-
-  const totalNearMisses      = nearMisses.length;
-  const nearMissesThisMonth  = nearMisses.filter(nm => isThisMonth(nm.date)).length;
-  const pendingInvNM         = nearMisses.filter(nm => nm.investigation_required === 'Yes' && !['Close','Closed'].includes(nm.status_id)).length;
 
   const totalTrainingSessions  = training.length;
-  const trainingsThisMonth     = training.filter(t => isThisMonth(t.date)).length;
   const totalTrainingManhours  = Math.round(training.reduce((sum, t) => sum + (Number(t.manhours) || 0), 0));
 
   const totalOpenCapas   = capas.filter(c => ['Open', 'Pending', 'Work in Progress'].includes(c.status_id)).length;
@@ -265,15 +246,15 @@ export const Dashboard = () => {
 
   const incDeptData = Object.entries(
     incidents.reduce((acc, c) => { if (c.department_id) acc[c.department_id] = (acc[c.department_id]||0)+1; return acc; }, {} as Record<string,number>)
-  ).map(([name, count]) => ({ name, count })).sort((a,b)=>b.count-a.count).slice(0,7);
+  ).map(([name, count]) => ({ name, count: Number(count) })).sort((a,b)=>b.count-a.count).slice(0,7);
 
   const hazCatData = Object.entries(
     hazards.reduce((acc, c) => { if (c.hazard_category_id) acc[c.hazard_category_id] = (acc[c.hazard_category_id]||0)+1; return acc; }, {} as Record<string,number>)
-  ).map(([name, count]) => ({ name, count })).sort((a,b)=>b.count-a.count).slice(0,6);
+  ).map(([name, count]) => ({ name, count: Number(count) })).sort((a,b)=>b.count-a.count).slice(0,6);
 
   const trDeptData = Object.entries(
     training.reduce((acc, c) => { if (c.department_id) acc[c.department_id] = (acc[c.department_id]||0)+(Number(c.manhours)||0); return acc; }, {} as Record<string,number>)
-  ).map(([name, count]) => ({ name, count: Math.round(count) })).sort((a,b)=>b.count-a.count).slice(0,7);
+  ).map(([name, count]) => ({ name, count: Math.round(Number(count)) })).sort((a,b)=>b.count-a.count).slice(0,7);
 
   const incCatData = Object.entries(
     incidents.reduce((acc, c) => { if (c.incident_category_id) acc[c.incident_category_id]=(acc[c.incident_category_id]||0)+1; return acc; }, {} as Record<string,number>)
@@ -571,7 +552,7 @@ export const Dashboard = () => {
               </div>
               {/* Compact legend */}
               <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
-                {data.slice(0,5).map((entry, i) => (
+                {(data as Array<{ name: string; value: number }>).slice(0,5).map((entry, i) => (
                   <div key={entry.name} className="flex items-center gap-1.5 text-[11px] text-[#6B7280]">
                     <span className="w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: colors[i % colors.length] }} />
                     {entry.name} ({entry.value})

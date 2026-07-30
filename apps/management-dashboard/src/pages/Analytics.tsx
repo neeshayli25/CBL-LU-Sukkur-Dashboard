@@ -126,7 +126,9 @@ export const Analytics = () => {
       if (val) acc[val] = (acc[val] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
-    return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+    return (Object.entries(counts) as Array<[string, number]>)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
   };
 
   const statusData   = getDistribution(hazards,   'status_id');
@@ -274,7 +276,7 @@ export const Analytics = () => {
                     </ResponsiveContainer>
                   </div>
                   <div className="space-y-1.5 mt-2">
-                    {data.slice(0,4).map((entry, i) => (
+                    {data.slice(0,4).map((entry: { name: string; value: number }, i: number) => (
                       <div key={entry.name} className="flex items-center justify-between text-[11px]">
                         <div className="flex items-center gap-1.5 min-w-0">
                           <span className="w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: colors[i % colors.length] }} />

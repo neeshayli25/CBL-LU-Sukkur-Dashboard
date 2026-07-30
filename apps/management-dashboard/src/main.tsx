@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { AuthProvider } from '@cbl/auth'
 import { setupMockApi } from '@cbl/api'
 import '@cbl/ui/src/global.css'
+import './index.css'
 import App from './App.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'
 

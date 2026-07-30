@@ -16,6 +16,10 @@ const STATUS_MAP: Record<string, StatusConfig> = {
   // Open / Active states
   'Open':             { bg: '#FEF9EC', text: '#92400E', border: '#FDE68A', dot: '#F59E0B' },
   'Pending':          { bg: '#FEF9EC', text: '#92400E', border: '#FDE68A', dot: '#F59E0B' },
+  'Assigned':         { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', dot: '#3B82F6' },
+  'Submitted for Review': { bg: '#F5F3FF', text: '#6D28D9', border: '#DDD6FE', dot: '#8B5CF6' },
+  'Reopened':         { bg: '#FFF7ED', text: '#C2410C', border: '#FDBA74', dot: '#F97316' },
+  'Rejected':         { bg: '#FEF2F2', text: '#991B1B', border: '#FECACA', dot: '#EF4444' },
 
   // In-progress states
   'Work in Progress': { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', dot: '#3B82F6' },

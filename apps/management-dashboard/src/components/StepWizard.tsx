@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Check } from 'lucide-react';
-import { ColumnSchema } from '../config/sectionSchemas';
+import type { ColumnSchema } from '../config/sectionSchemas';
 
 interface StepWizardProps {
   isOpen: boolean;

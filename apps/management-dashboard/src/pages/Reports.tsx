@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import { usePermissions }  from '@cbl/auth';
 import { Layout }          from '../components/Layout';
-import { FilterBar }       from '../components/FilterBar';
 import { ContextHeader }   from '../components/ContextHeader';
 import { StatusBadge }     from '../components/StatusBadge';
 import {
-  FileText, Download, Printer, Table as TableIcon, RefreshCw, Star, Clock, Bookmark, ChevronRight,
-  AlertTriangle, Target, Users, CheckSquare, ClipboardList
+  Download, Printer, Table as TableIcon, RefreshCw, Star, Clock, Bookmark, ChevronRight
 } from 'lucide-react';
 import { DEPARTMENTS, STATUSES, RISK_RATINGS, INCIDENT_CATEGORIES } from '../config/constants';
 import { moduleService }   from '../services/api/moduleService';
@@ -18,11 +16,11 @@ import { ALL_SECTIONS }    from '../config/sectionSchemas';
 // ============================================================
 
 const REPORT_TYPES = [
-  { id: 'incident-log',       label: 'Incident Log',        icon: ClipboardList },
-  { id: 'hazard-reporting',   label: 'Hazard Reporting',    icon: AlertTriangle },
-  { id: 'near-miss',          label: 'Near Miss',           icon: Target },
-  { id: 'training-records',   label: 'Training Records',    icon: Users },
-  { id: 'action-tracker',     label: 'Actions / CAPA',      icon: CheckSquare },
+  { id: 'incident-log',       label: 'Incident Log',        icon: '📋' },
+  { id: 'hazard-reporting',   label: 'Hazard Reporting',    icon: '⚠️' },
+  { id: 'near-miss',          label: 'Near Miss',           icon: '🎯' },
+  { id: 'training-records',   label: 'Training Records',    icon: '👥' },
+  { id: 'action-tracker',     label: 'Actions / CAPA',      icon: '✅' },
 ];
 
 const SAVED_TEMPLATES = [
@@ -197,9 +195,7 @@ export const Reports = () => {
                     : 'bg-white text-[#374151] border-[#E0E0E0] hover:bg-[#F5F5F5] hover:border-[#AAAAAA]'
                 }`}
               >
-                <rt.icon 
-                  className={`h-4 w-4 ${currentReportId === rt.id ? 'text-white' : 'text-[#6B7280]'}`} 
-                />
+                <span>{rt.icon}</span>
                 {rt.label}
               </button>
             ))}

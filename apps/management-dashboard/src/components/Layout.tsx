@@ -6,7 +6,7 @@ import {
   ChevronRight, ChevronLeft, Menu, Bell, ChevronDown, X,
   UserCircle, Settings as SettingsIcon, HelpCircle,
   AlertTriangle, Target, FileWarning, CheckSquare, ClipboardList,
-  Search as SearchIcon, Users, ExternalLink
+  Users, ExternalLink
 } from 'lucide-react';
 
 // ============================================================
@@ -366,21 +366,19 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
         <aside
           className={`
             fixed left-0 top-12 bottom-0 flex flex-col
-            bg-[#F8F9FA] border-r border-[#EAEAEA] z-40
+            bg-white border-r border-[#E0E0E0] z-40
             transition-all duration-200 ease-in-out
             ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
           `}
           style={{ width: sidebarWidth }}
         >
           {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto py-3 hide-scrollbar">
+          <nav className="flex-1 overflow-y-auto py-2 hide-scrollbar">
             {NAV_GROUPS.map(group => (
-              <div key={group.label} className="mb-2">
+              <div key={group.label}>
                 {/* Group label */}
                 {!collapsed && (
-                  <span className="block px-5 py-1.5 text-[11px] font-bold text-[#8B8D98] uppercase tracking-[0.05em]">
-                    {group.label}
-                  </span>
+                  <span className="block px-4 py-1.5 text-[10px] font-bold text-[#9CA3AF] uppercase tracking-wider">{group.label}</span>
                 )}
                 {/* Group items */}
                 <div className={collapsed ? 'mt-1' : ''}>
@@ -396,26 +394,31 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                         to={item.href}
                         onClick={() => setMobileMenuOpen(false)}
                         className={`
-                          relative flex items-center gap-3 mx-3 mb-1
-                          text-[13px] font-semibold rounded-md transition-all duration-150
-                          ${collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'}
-                          ${isActive 
-                            ? 'bg-white text-[#1A1818] shadow-[0_1px_3px_rgba(0,0,0,0.08)] ring-1 ring-black/[0.03]' 
-                            : 'text-[#4B5563] hover:bg-[#EDEEF0] hover:text-[#1A1818]'
-                          }
+                          relative flex items-center gap-3 mx-2 mb-0.5
+                          text-[13px] font-medium rounded transition-colors duration-100
+                          ${collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2'}
                         `}
+                        style={{
+                          color:           isActive ? '#CB0017' : '#374151',
+                          backgroundColor: isActive ? '#FFF7F7' : 'transparent',
+                        }}
+                        onMouseEnter={e => {
+                          if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = '#F9FAFB';
+                        }}
+                        onMouseLeave={e => {
+                          if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+                        }}
                         title={collapsed ? item.title : undefined}
                       >
                         {/* Active left indicator */}
                         {isActive && (
-                          <div className="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-[#CB0017] rounded-r-full" />
+                          <div className="absolute left-0 top-1 bottom-1 w-0.5 bg-[#CB0017] rounded-r" />
                         )}
                         <item.Icon
-                          className="shrink-0 transition-colors duration-150"
+                          className="shrink-0"
                           style={{
-                            width: 17, height: 17,
-                            color: isActive ? '#CB0017' : 'currentColor',
-                            opacity: isActive ? 1 : 0.6
+                            width: 16, height: 16,
+                            color: isActive ? '#CB0017' : '#9CA3AF',
                           }}
                         />
                         {!collapsed && (
@@ -426,6 +429,10 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                   })}
                 </div>
 
+                {/* Divider between groups */}
+                {!collapsed && (
+                  <div className="mx-4 mt-1 mb-0 border-b border-[#F3F4F6]" />
+                )}
               </div>
             ))}
           </nav>
