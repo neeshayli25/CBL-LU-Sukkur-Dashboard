@@ -273,12 +273,17 @@ const MergedAuditInspectionWorkspace = ({ activeSchema }: { activeSchema: Sectio
 
       <div className="p-6">
         <div className={`${CARD} overflow-hidden`}>
-          <div className="overflow-x-auto">
-            <table className="w-full enterprise-table">
-              <thead>
-                <tr>
+          <div className="max-h-[calc(100vh-260px)] overflow-auto">
+            <table className="w-full border-collapse">
+              <thead className="sticky top-0 z-20 bg-white">
+                <tr className="bg-white">
                   {schemaForTable.columns.filter(c => !c.hideFromForm).map(col => (
-                    <th key={col.key}>{col.label}</th>
+                    <th
+                      key={col.key}
+                      className="border-b border-[#E5E7EB] bg-white px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-[#374151] whitespace-nowrap"
+                    >
+                      {col.label}
+                    </th>
                   ))}
                 </tr>
               </thead>
@@ -287,16 +292,22 @@ const MergedAuditInspectionWorkspace = ({ activeSchema }: { activeSchema: Sectio
                   Array.from({ length: 5 }).map((_, i) => (
                     <tr key={i}>
                       {schemaForTable.columns.filter(c => !c.hideFromForm).map(col => (
-                        <td key={col.key}><div className="h-3.5 bg-[#F0F0F0] rounded animate-pulse w-[70%]" /></td>
+                        <td key={col.key} className="border-b border-[#E5E7EB] px-4 py-3">
+                          <div className="h-3.5 bg-[#F0F0F0] rounded animate-pulse w-[70%]" />
+                        </td>
                       ))}
                     </tr>
                   ))
                 ) : (activeData.data.length === 0 ? (
-                  <tr><td colSpan={schemaForTable.columns.length}><div className="py-16 text-center text-[#9CA3AF]">No records available</div></td></tr>
+                  <tr>
+                    <td colSpan={schemaForTable.columns.filter(c => !c.hideFromForm).length}>
+                      <div className="py-16 text-center text-[#9CA3AF]">No records available</div>
+                    </td>
+                  </tr>
                 ) : activeData.data.map(row => (
                   <tr key={row.id}>
                     {schemaForTable.columns.filter(c => !c.hideFromForm).map(col => (
-                      <td key={col.key}>
+                      <td key={col.key} className="border-b border-[#E5E7EB] px-4 py-3">
                         {STATUS_COLUMNS.has(col.key) && row[col.key] ? <StatusBadge status={row[col.key]} size="xs" /> : <span>{row[col.key] || '—'}</span>}
                       </td>
                     ))}
