@@ -8,10 +8,10 @@
     "build": "tsc"
   },
   "dependencies": {
+    "@cbl/api": "*",
     "@azure/msal-browser": "^3.16.0",
     "@azure/msal-react": "^2.0.17",
     "zustand": "^4.5.2",
-    "axios": "^1.7.2",
     "jwt-decode": "^4.0.0"
   },
   "peerDependencies": {

@@ -21,18 +21,7 @@ export const configureTokenRefresh = (handler: () => Promise<string | null>) => 
 // Request Interceptor: Inject JWT Token
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    let token = tokenStore.getAccessToken();
-    if (!token) {
-      try {
-        const stored = localStorage.getItem("cbl-auth-storage");
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          token = parsed.state?.token || null;
-        }
-      } catch (e) {
-        // ignore
-      }
-    }
+    const token = tokenStore.getAccessToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
