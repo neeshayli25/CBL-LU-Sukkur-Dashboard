@@ -12,11 +12,11 @@ const PORT = config.port || 5000;
 const server = http.createServer(app);
 
 // ─── Socket.IO ───────────────────────────────────────────────────────────────
-const { initSockets } = require('./src/sockets');
+const { initSockets } = require('./src/core/sockets');
 initSockets(server);
 
 // ─── Cron Jobs ───────────────────────────────────────────────────────────────
-const { initCron } = require('./src/cron/scheduler');
+const { initCron } = require('./src/core/cron/scheduler');
 
 // ─── Graceful Shutdown ───────────────────────────────────────────────────────
 const shutdown = async (signal) => {

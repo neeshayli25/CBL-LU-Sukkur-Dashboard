@@ -3,7 +3,7 @@
 require('dotenv').config();
 
 const { sequelize } = require('../src/database/connection');
-const logger = require('../src/utils/logger');
+const logger = require('../src/shared/utils/logger');
 
 const runMigrations = async () => {
   try {
