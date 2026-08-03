@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useAuthStore } from '@cbl/auth';
 
@@ -20,7 +20,7 @@ const FilterContext = createContext<FilterContextType | undefined>(undefined);
 
 export const FilterProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuthStore();
-  const initialDept = user?.department || 'All';
+  const initialDept = user?.department_id || 'All';
 
   const [filters, setFilters] = useState<Filters>({
     year: '2026',
@@ -30,6 +30,12 @@ export const FilterProvider = ({ children }: { children: ReactNode }) => {
     fromDate: '',
     toDate: '',
   });
+
+  useEffect(() => {
+    if (user?.department_id) {
+      setFilters((current) => ({ ...current, department: user.department_id || 'All' }));
+    }
+  }, [user?.department_id]);
 
   const setFilter = (key: keyof Filters, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
