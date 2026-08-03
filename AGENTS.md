@@ -17,7 +17,8 @@ you normally don't need to touch them.
 
 - **Backend:** from `backend/`, ensure `.env` exists (already created; key values: `DB_HOST=127.0.0.1`, `DB_PASSWORD=secret`, `DB_NAME=cbl_db`, generated JWT secrets, `ENCRYPTION_KEY` must be exactly 32 chars). Start with `npm run dev` (nodemon). Health check: `curl localhost:5000/api/health`.
   - Nodemon only watches `src/**`. If you edit `server.js` or other root-level files, it will **not** auto-restart — type `rs` in the nodemon terminal (or restart it).
-- **Frontend:** run **vite directly** from `frontend/apps/management-dashboard/` with `npm run dev`. Do **not** use `turbo run dev` / `npm run dev` at the `frontend/` root — turbo aborts with "Workspace package resolves outside repository root" because of the `frontend/packages` symlink. Open http://localhost:5173.
+- **Frontend:** run **vite directly** from `frontend/apps/management-dashboard/` with `npx vite --host 0.0.0.0 --port 5173` (or `npm run dev -- --host 0.0.0.0`). Do **not** use `turbo run dev` / `npm run dev` at the `frontend/` root — turbo aborts with "Workspace package resolves outside repository root" because of the `frontend/packages` symlink. Open http://localhost:5173.
+  - **Must bind `--host 0.0.0.0`**: plain `vite` / `npm run dev` binds only to IPv6 `::1`, which causes `ERR_CONNECTION_RESET` / connection refused from the Cursor browser pane and from `127.0.0.1`. Confirm with `ss -tlnp | grep 5173` — you want `0.0.0.0:5173`, not `::1:5173`.
   - `frontend/apps/management-dashboard/.env` sets `VITE_API_URL=http://localhost:5000/api/v1` and `VITE_BYPASS_AUTH=true`. Bypass mode renders the full dashboard UI with a fake preview identity but sends **no** JWT, so backend calls return 401 (expected).
 
 ### Database migrations / seeders (important gotchas)
