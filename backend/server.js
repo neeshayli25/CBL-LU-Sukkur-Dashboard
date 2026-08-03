@@ -50,7 +50,7 @@ const bootstrap = async () => {
     await sequelize.authenticate();
     logger.info('✅ MySQL connected successfully');
 
-    server.listen(PORT, () => {
+    server.listen(PORT, '0.0.0.0', () => {
       logger.info(`🚀 Server running on port ${PORT} [${config.env}]`);
       logger.info(`📖 API Docs: http://localhost:${PORT}/api/docs`);
       logger.info(`❤️  Health:  http://localhost:${PORT}/api/health`);
