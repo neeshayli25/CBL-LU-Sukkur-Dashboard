@@ -235,6 +235,7 @@ const ActionTrackerWorkspace = ({
       </div>
 
       </div>
+      </div>
 
       <CenterModal
         isOpen={showAddCard}
