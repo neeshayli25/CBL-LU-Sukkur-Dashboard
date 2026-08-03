@@ -13,6 +13,14 @@
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
+    "baseUrl": "../..",
+    "ignoreDeprecations": "6.0",
+    "paths": {
+      "@cbl/api": ["packages/api/src/index.ts"],
+      "@cbl/auth": ["packages/auth/src/index.ts"],
+      "@cbl/ui": ["packages/ui/src/index.ts"],
+      "@cbl/ui/*": ["packages/ui/src/*"]
+    },
     "noEmit": true,
     "jsx": "react-jsx",
 
