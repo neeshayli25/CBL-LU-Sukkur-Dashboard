@@ -19,8 +19,8 @@ interface FilterBarProps {
 }
 
 const selectClass =
-  'h-8 text-[12px] border border-[#E0E0E0] rounded-md bg-white text-[#1A1818] px-2 pr-6 ' +
-  'focus:outline-none focus:border-[#CB0017] focus:ring-1 focus:ring-[#CB0017]/20 ' +
+  'h-8 text-[12px] border border-[#E0E0E0] rounded-md bg-white text-[#1C1C1E] px-2 pr-6 ' +
+  'focus:outline-none focus:border-[#7B1010] focus:ring-1 focus:ring-[#7B1010]/20 ' +
   'appearance-none cursor-pointer';
 
 export const FilterBar: React.FC<FilterBarProps> = ({
@@ -108,14 +108,14 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             type="date"
             value={filters.fromDate}
             onChange={e => setFilter('fromDate', e.target.value)}
-            className="h-8 text-[12px] border border-[#E0E0E0] rounded-md bg-white text-[#1A1818] px-2 focus:outline-none focus:border-[#CB0017] focus:ring-1 focus:ring-[#CB0017]/20"
+            className="h-8 text-[12px] border border-[#E0E0E0] rounded-md bg-white text-[#1C1C1E] px-2 focus:outline-none focus:border-[#7B1010] focus:ring-1 focus:ring-[#7B1010]/20"
           />
           <span className="text-[12px] text-[#9CA3AF]">–</span>
           <input
             type="date"
             value={filters.toDate}
             onChange={e => setFilter('toDate', e.target.value)}
-            className="h-8 text-[12px] border border-[#E0E0E0] rounded-md bg-white text-[#1A1818] px-2 focus:outline-none focus:border-[#CB0017] focus:ring-1 focus:ring-[#CB0017]/20"
+            className="h-8 text-[12px] border border-[#E0E0E0] rounded-md bg-white text-[#1C1C1E] px-2 focus:outline-none focus:border-[#7B1010] focus:ring-1 focus:ring-[#7B1010]/20"
           />
         </>
       )}
@@ -123,7 +123,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       {hasActiveFilters && (
         <button
           onClick={clearFilters}
-          className="flex items-center gap-1 h-8 px-2 text-[12px] font-medium text-[#CB0017] border border-[#CB0017]/30 rounded-md hover:bg-[#FFF7F7] transition-colors"
+          className="flex items-center gap-1 h-8 px-2 text-[12px] font-medium text-[#7B1010] border border-[#7B1010]/30 rounded-md hover:bg-[rgba(123,16,16,0.04)] transition-colors"
           title="Clear all filters"
         >
           <RotateCcw className="h-3 w-3" />

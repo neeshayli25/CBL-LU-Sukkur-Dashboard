@@ -27,10 +27,10 @@ interface ContextHeaderProps {
 }
 
 const ACTION_STYLES: Record<string, string> = {
-  primary:  'bg-[#CB0017] text-white border-[#CB0017] hover:bg-[#A8001A] shadow-sm',
-  outlined: 'bg-white text-[#1A1818] border-[#DEDEDE] hover:bg-[#F5F5F5] hover:border-[#AAAAAA]',
-  ghost:    'bg-transparent text-[#6B7280] border-transparent hover:bg-[#F5F5F5] hover:text-[#1A1818]',
-  danger:   'bg-white text-[#B3001B] border-[#B3001B]/40 hover:bg-[#FEF2F2]',
+  primary:  'bg-[var(--brand-maroon)] text-white border-[var(--brand-maroon)] hover:bg-[#5E0C0C] shadow-sm',
+  outlined: 'bg-white text-[#1C1C1E] border-[#E8E0C8] hover:bg-[#F5F0DC] hover:border-[#D5CCAC]',
+  ghost:    'bg-transparent text-[#6B7280] border-transparent hover:bg-[#F5F0DC] hover:text-[#1C1C1E]',
+  danger:   'bg-white text-[#B91C1C] border-[#FECACA] hover:bg-[#FEF2F2]',
 };
 
 export const ContextHeader: React.FC<ContextHeaderProps> = ({
@@ -50,7 +50,7 @@ export const ContextHeader: React.FC<ContextHeaderProps> = ({
         >
           <Link
             to="/dashboard"
-            className="flex items-center text-[#9CA3AF] hover:text-[#CB0017] transition-colors"
+            className="flex items-center text-[#9CA3AF] hover:text-[var(--brand-maroon)] transition-colors"
             title="Dashboard"
           >
             <Home className="h-3 w-3" />
@@ -75,7 +75,7 @@ export const ContextHeader: React.FC<ContextHeaderProps> = ({
       {/* Title row */}
       <div className="flex items-center justify-between gap-4 min-h-[36px]">
         <div className="min-w-0">
-          <h1 className="text-[20px] font-bold text-[#1A1818] leading-tight truncate">
+          <h1 className="text-[24px] font-bold text-[#2C1810] leading-tight truncate tracking-tight">
             {title}
           </h1>
           {subtitle && (

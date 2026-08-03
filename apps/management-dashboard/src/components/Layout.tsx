@@ -103,77 +103,45 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F5F5F5]" onClick={closeOverlays}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--workspace-bg, #F5F0DC)' }} onClick={closeOverlays}>
 
       {/* ================================================================
           SHELL HEADER — 48px dark bar (SAP Fiori standard)
           ================================================================ */}
       <header
-        className="fixed top-0 left-0 right-0 z-50 h-12 flex items-center border-b border-white/10"
-        style={{ backgroundColor: '#1A1818' }}
+        className="fixed top-0 left-0 right-0 z-50 h-12 flex items-center border-b"
+        style={{ backgroundColor: '#FFFFFF', borderColor: '#E8E0C8' }}
         onClick={e => e.stopPropagation()}
       >
-        {/* Logo + App Identity */}
+        {/* Logo + App Identity — in sidebar header zone */}
         <div
-          className="flex items-center h-full border-r border-white/10 px-4 shrink-0 overflow-hidden"
-          style={{ width: sidebarWidth, transition: 'width 0.2s ease' }}
+          className="flex items-center h-full border-r px-4 shrink-0 overflow-hidden"
+          style={{ width: sidebarWidth, transition: 'width 0.2s ease', borderColor: '#E8E0C8', backgroundColor: 'var(--sidebar-bg, #7B1010)' }}
         >
           <div className="flex items-center gap-2.5 min-w-0">
             <img
               src="/logo-dark.svg"
               alt="CBL"
-              className="h-8 w-auto shrink-0"
+              className="h-7 w-auto shrink-0 brightness-0 invert"
             />
             {!collapsed && (
               <div className="min-w-0 overflow-hidden">
-                <p className="text-white text-[12px] font-semibold leading-tight truncate">
-                  HSE Management
+                <p className="text-white text-[13px] font-bold leading-tight truncate tracking-wide uppercase">
+                  CBL LU SUKKUR
                 </p>
-                <p className="leading-tight truncate" style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10 }}>
-                  CBL · LU Sukkur Plant
+                <p className="leading-tight truncate font-medium" style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, letterSpacing: '0.08em' }}>
+                  HSE MANAGEMENT
                 </p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Breadcrumb / Page context — center */}
-        <div className="flex-1 px-4 hidden md:flex items-center gap-1.5 overflow-hidden">
-          <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12 }}>Home</span>
-          {/* Dynamic breadcrumbs from current route */}
-          {(() => {
-            const segments = location.pathname.split('/').filter(Boolean);
-            const pathMap: Record<string, string> = {
-              'dashboard':          'Dashboard',
-              'hazard-reporting':   'Hazard Reporting',
-              'near-miss':          'Near Miss',
-              'incident-log':       'Incident Log',
-              'action-tracker':     'CAPA / Actions',
-              'audit-management':   'Audit Management',
-              'inspection-records': 'Inspection Records',
-              'training-records':   'Training Records',
-              'reports':            'Reports',
-              'analytics':          'Analytics',
-              'settings':           'Settings',
-              'profile':            'Profile',
-            };
-            return segments.map((seg, i) => (
-              <React.Fragment key={seg}>
-                <ChevronRight className="h-3 w-3 shrink-0" style={{ color: 'rgba(255,255,255,0.25)' }} />
-                <span
-                  style={{
-                    fontSize: 12,
-                    fontWeight: i === segments.length - 1 ? 600 : 400,
-                    color: i === segments.length - 1
-                      ? 'rgba(255,255,255,0.9)'
-                      : 'rgba(255,255,255,0.45)',
-                  }}
-                >
-                  {pathMap[seg] ?? seg}
-                </span>
-              </React.Fragment>
-            ));
-          })()}
+        {/* App title — center */}
+        <div className="flex-1 px-6 hidden md:flex items-center overflow-hidden">
+          <span className="text-[15px] font-bold text-[#2C1810] tracking-tight">
+            HSE Management System
+          </span>
         </div>
 
         {/* Mobile hamburger */}
@@ -187,17 +155,25 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
         {/* Right: Notifications + User */}
         <div className="flex items-center gap-1 pr-3 shrink-0" onClick={e => e.stopPropagation()}>
 
+          {/* ---- Dark Mode Toggle ---- */}
+          <button
+            className="relative flex items-center justify-center w-8 h-8 rounded text-[#6B7280] hover:text-[#2C1810] hover:bg-[#EDE8D8] transition-colors"
+            title="Toggle dark mode"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+
           {/* ---- Notification Bell ---- */}
           <div className="relative">
             <button
               onClick={() => { setShowNotifications(!showNotifications); setUserMenuOpen(false); }}
-              className="relative flex items-center justify-center w-8 h-8 rounded text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+              className="relative flex items-center justify-center w-8 h-8 rounded text-[#6B7280] hover:text-[#2C1810] hover:bg-[#EDE8D8] transition-colors"
             >
               <Bell className="h-[18px] w-[18px]" />
               {unreadCount > 0 && (
                 <span
                   className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full border-2"
-                  style={{ backgroundColor: '#CB0017', borderColor: '#1A1818' }}
+                  style={{ backgroundColor: '#7B1010', borderColor: '#FFFFFF' }}
                 />
               )}
             </button>
@@ -289,30 +265,27 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
           </div>
 
           {/* Divider */}
-          <div className="h-5 w-px bg-white/15 mx-1" />
+          <div className="h-5 w-px bg-[#D5CCAC] mx-1" />
 
           {/* ---- User Menu ---- */}
           <div className="relative">
             <button
               onClick={() => { setUserMenuOpen(!userMenuOpen); setShowNotifications(false); }}
-              className="flex items-center gap-2 h-8 pl-1.5 pr-2 rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+              className="flex items-center gap-2 h-8 pl-2 pr-3 rounded-full border border-[#D5CCAC] bg-white/60 hover:bg-white transition-colors"
             >
               {/* Avatar */}
               <div
-                className="h-6 w-6 rounded flex items-center justify-center text-white text-[10px] font-bold shrink-0"
-                style={{ backgroundColor: '#CB0017' }}
+                className="h-6 w-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0"
+                style={{ backgroundColor: '#7B1010' }}
               >
                 {initials}
               </div>
               <div className="hidden sm:block text-left leading-none">
-                <p className="text-white text-[11px] font-semibold">
+                <p className="text-[#2C1810] text-[12px] font-semibold">
                   {user?.name?.split(' ')[0] ?? 'User'}
                 </p>
-                <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.45)' }}>
-                  {user?.role ?? 'Staff'}
-                </p>
               </div>
-              <ChevronDown className="h-3 w-3" style={{ color: 'rgba(255,255,255,0.4)' }} />
+              <ChevronDown className="h-3 w-3 text-[#9CA3AF]" />
             </button>
 
             {userMenuOpen && (
@@ -326,7 +299,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                   <p className="text-[11px] text-[#6B7280] truncate">{user?.email ?? ''}</p>
                   <span
                     className="mt-1.5 inline-block text-[10px] font-semibold px-2 py-0.5 rounded"
-                    style={{ backgroundColor: '#FFF7F7', color: '#CB0017', border: '1px solid rgba(203,0,23,0.2)' }}
+                    style={{ backgroundColor: 'rgba(123,16,16,0.08)', color: '#7B1010', border: '1px solid rgba(123,16,16,0.2)' }}
                   >
                     {user?.role ?? 'Staff'}
                   </span>
@@ -352,7 +325,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                   <button
                     onClick={handleLogout}
                     className="flex w-full items-center gap-2.5 px-4 py-2 text-[13px] font-medium hover:bg-[#FEF2F2] transition-colors"
-                    style={{ color: '#CB0017' }}
+                    style={{ color: '#7B1010' }}
                   >
                     <LogOut className="h-4 w-4" />
                     Sign Out
@@ -375,30 +348,32 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
           style={{ width: sidebarWidth }}
         />
 
-        {/* ---- LEFT SIDEBAR ---- */}
+        {/* ---- LEFT SIDEBAR — Maroon (#7B1010) matching Stitch design ---- */}
         <aside
           className={`
-            fixed left-0 top-12 bottom-0 flex flex-col
-            bg-white border-r border-[#E0E0E0] z-40
+            fixed left-0 top-12 bottom-0 flex flex-col z-40
             transition-all duration-200 ease-in-out
             ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
           `}
-          style={{ width: sidebarWidth }}
+          style={{ width: sidebarWidth, backgroundColor: 'var(--sidebar-bg, #7B1010)' }}
         >
           {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto py-2 hide-scrollbar">
-            {NAV_GROUPS.map(group => (
+          <nav className="flex-1 overflow-y-auto py-3 hide-scrollbar">
+            {NAV_GROUPS.map((group, gi) => (
               <div key={group.label}>
                 {/* Group label */}
                 {!collapsed && (
-                  <span className="block px-4 py-1.5 text-[10px] font-bold text-[#9CA3AF] uppercase tracking-wider">{group.label}</span>
+                  <span
+                    className="block px-4 pt-3 pb-1 text-[10px] font-bold uppercase tracking-widest select-none"
+                    style={{ color: 'var(--sidebar-group-label, rgba(255,255,255,0.35))' }}
+                  >
+                    {group.label}
+                  </span>
                 )}
                 {/* Group items */}
-                <div className={collapsed ? 'mt-1' : ''}>
+                <div className="space-y-0.5 px-2">
                   {group.items.map(item => {
-                    // Permission check for reports
                     if (item.href === '/reports' && !canViewReports()) return null;
-
                     const isActive = getIsActive(location.pathname, item.href);
 
                     return (
@@ -407,32 +382,32 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                         to={item.href}
                         onClick={() => setMobileMenuOpen(false)}
                         className={`
-                          relative flex items-center gap-3 mx-2 mb-0.5
-                          text-[13px] font-medium rounded transition-colors duration-100
+                          relative flex items-center gap-3 rounded-md
+                          text-[13px] font-medium transition-all duration-150
                           ${collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2'}
                         `}
                         style={{
-                          color:           isActive ? '#CB0017' : '#374151',
-                          backgroundColor: isActive ? '#FFF7F7' : 'transparent',
+                          color: isActive
+                            ? '#FFFFFF'
+                            : 'var(--sidebar-text, rgba(255,255,255,0.85))',
+                          backgroundColor: isActive
+                            ? 'var(--sidebar-active-bg, rgba(255,255,255,0.15))'
+                            : 'transparent',
                         }}
                         onMouseEnter={e => {
-                          if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = '#F9FAFB';
+                          if (!isActive)
+                            (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--sidebar-hover-bg, rgba(255,255,255,0.08))';
                         }}
                         onMouseLeave={e => {
-                          if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+                          if (!isActive)
+                            (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
                         }}
                         title={collapsed ? item.title : undefined}
                       >
-                        {/* Active left indicator */}
-                        {isActive && (
-                          <div className="absolute left-0 top-1 bottom-1 w-0.5 bg-[#CB0017] rounded-r" />
-                        )}
                         <item.Icon
                           className="shrink-0"
-                          style={{
-                            width: 16, height: 16,
-                            color: isActive ? '#CB0017' : '#9CA3AF',
-                          }}
+                          style={{ width: 16, height: 16,
+                            color: isActive ? '#FFFFFF' : 'rgba(255,255,255,0.65)' }}
                         />
                         {!collapsed && (
                           <span className="truncate leading-none">{item.title}</span>
@@ -442,24 +417,52 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                   })}
                 </div>
 
-                {/* Divider between groups */}
-                {!collapsed && (
-                  <div className="mx-4 mt-1 mb-0 border-b border-[#F3F4F6]" />
+                {/* Subtle divider — not between last group */}
+                {!collapsed && gi < NAV_GROUPS.length - 2 && (
+                  <div className="mx-4 mt-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }} />
                 )}
               </div>
             ))}
           </nav>
 
-          {/* Sidebar footer — version + collapse toggle */}
-          <div className="border-t border-[#E0E0E0] p-2">
-            {!collapsed && (
-              <p className="text-[10px] text-center mb-1.5 select-none" style={{ color: '#D1D5DB' }}>
-                CBL HSE Management · v1.0.0
-              </p>
-            )}
+          {/* Sidebar footer — Settings + Support pinned at bottom */}
+          <div className="pb-4 px-2 space-y-0.5" style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '12px' }}>
+            {[{ title: 'Settings', href: '/settings', Icon: Settings }, { title: 'Support', href: '/support', Icon: HelpCircle }].map(item => {
+              const isActive = getIsActive(location.pathname, item.href);
+              return (
+                <NavLink
+                  key={item.href}
+                  to={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center gap-3 rounded-md text-[13px] font-medium transition-all duration-150 ${
+                    collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2'
+                  }`}
+                  style={{
+                    color: isActive ? '#FFFFFF' : 'var(--sidebar-text, rgba(255,255,255,0.85))',
+                    backgroundColor: isActive ? 'var(--sidebar-active-bg)' : 'transparent',
+                  }}
+                  onMouseEnter={e => {
+                    if (!isActive)
+                      (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--sidebar-hover-bg, rgba(255,255,255,0.08))';
+                  }}
+                  onMouseLeave={e => {
+                    if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+                  }}
+                  title={collapsed ? item.title : undefined}
+                >
+                  <item.Icon style={{ width: 16, height: 16, color: isActive ? '#FFFFFF' : 'rgba(255,255,255,0.65)', flexShrink: 0 }} />
+                  {!collapsed && <span className="truncate leading-none">{item.title}</span>}
+                </NavLink>
+              );
+            })}
+
+            {/* Collapse toggle */}
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className="flex w-full items-center justify-center h-8 rounded text-[#9CA3AF] hover:text-[#374151] hover:bg-[#F5F5F5] transition-colors"
+              className="flex w-full items-center justify-center h-8 rounded-md transition-colors mt-1"
+              style={{ color: 'rgba(255,255,255,0.45)' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.06)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
               title={collapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
             >
               {collapsed
@@ -478,9 +481,8 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
           />
         )}
 
-        {/* ---- MAIN CONTENT AREA ---- */}
-        {/* bg-[#F5F5F5] = SAP shell workspace grey */}
-        <main className="flex-1 overflow-y-auto min-h-[calc(100vh-48px)] bg-[#F5F5F5]">
+        {/* ---- MAIN CONTENT AREA ---- warm linen workspace */}
+        <main className="flex-1 overflow-y-auto min-h-[calc(100vh-48px)]" style={{ backgroundColor: 'var(--workspace-bg, #F5F0DC)' }}>
           {children}
         </main>
 

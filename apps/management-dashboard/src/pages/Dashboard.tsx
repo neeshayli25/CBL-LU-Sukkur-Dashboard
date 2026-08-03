@@ -11,6 +11,7 @@ import { KpiTile }              from '../components/KpiTile';
 import { FilterBar }            from '../components/FilterBar';
 import { ContextHeader }        from '../components/ContextHeader';
 import { StatusBadge }          from '../components/StatusBadge';
+import { PlantPhotoCard }       from '../components/PlantPhotoCard';
 import { useFilters }           from '../context/FilterContext';
 import {
   CheckCircle2, FileWarning, Timer,
@@ -95,14 +96,15 @@ const SectionHeader = ({ title, onViewAll, onToggle, expanded }: {
 }) => (
   <div className="flex items-center justify-between mb-4">
     <div className="flex items-center gap-2">
-      <div className="w-1 h-5 rounded-full bg-[#CB0017]" />
+      <div className="w-1 h-5 rounded-full" style={{ backgroundColor: '#7B1010' }} />
       <h2 className="text-[13px] font-bold text-[#374151] uppercase tracking-wider">{title}</h2>
     </div>
     <div className="flex items-center gap-2">
       {onViewAll && (
         <button
           onClick={onViewAll}
-          className="flex items-center gap-1 text-[12px] font-medium text-[#CB0017] hover:underline transition-colors"
+          className="flex items-center gap-1 text-[12px] font-medium hover:underline transition-colors"
+          style={{ color: '#7B1010' }}
         >
           View Details <ArrowRight className="h-3 w-3" />
         </button>
@@ -118,14 +120,26 @@ const SectionHeader = ({ title, onViewAll, onToggle, expanded }: {
 
 // ===== Enterprise Panel =====
 const Panel = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
-  <div className={`bg-white border border-[#E0E0E0] rounded-lg ${className}`}
-       style={{ boxShadow: '0 1px 4px 0 rgba(0,0,0,0.06)' }}>
+  <div className={`bg-white border border-[#E8E0C8] rounded-lg ${className}`}
+       style={{ boxShadow: '0 1px 3px 0 rgba(0,0,0,0.08)' }}>
     {children}
   </div>
 );
 
-const PIE_COLORS_STATUS = [CHART_COLORS.warning, CHART_COLORS.success, CHART_COLORS.danger];
-const PIE_COLORS_RISK   = [CHART_COLORS.info, CHART_COLORS.success, CHART_COLORS.warning, CHART_COLORS.danger];
+// ===== Stitch Design Brand Colors for charts =====
+const STITCH_CHART = {
+  maroon:   '#7B1010',
+  maroonMid:'#A01515',
+  olive:    '#6B5A1E',
+  oliveLight:'#A08C3A',
+  amber:    '#D97706',
+  grey:     '#6B7280',
+};
+
+const PIE_COLORS_RISK_STITCH  = [STITCH_CHART.maroon, '#B91C1C', STITCH_CHART.amber, STITCH_CHART.grey];
+const PIE_COLORS_STATUS_STITCH = [STITCH_CHART.amber, '#16A34A', '#B91C1C'];
+const PIE_COLORS_STATUS = PIE_COLORS_STATUS_STITCH;
+const PIE_COLORS_RISK   = PIE_COLORS_RISK_STITCH;
 
 export const Dashboard = () => {
   const navigate    = useNavigate();
@@ -276,7 +290,7 @@ export const Dashboard = () => {
     return (
       <Layout>
         <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
-          <RefreshCw className="h-8 w-8 text-[#CB0017] animate-spin" />
+          <RefreshCw className="h-8 w-8 animate-spin" style={{ color: '#7B1010' }} />
           <p className="text-[13px] text-[#6B7280]">Loading dashboard data…</p>
         </div>
       </Layout>
@@ -300,59 +314,78 @@ export const Dashboard = () => {
 
       <div className="p-6 space-y-6">
 
-        {/* ============ ROW 1 — KPI TILES ============ */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        {/* ============ ROW 1 — KPI TILES (Stitch layout) ============ */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          <KpiTile
+            label="Total Hazards"
+            value={totalHazards}
+            accent="warning"
+            icon={<AlertTriangle />}
+            trend={12}
+            trendLabel="vs last month"
+            subtleLine="Reports vs Prev Year"
+            onClick={() => navigate('/hazard-reporting')}
+          />
           <KpiTile
             label="Total Incidents"
             value={totalIncidents}
             accent="danger"
-            icon={<AlertTriangle />}
-            trendLabel="total reported"
+            icon={<FileWarning />}
+            trend={-5}
+            trendLabel="vs last year"
+            subtleLine="Safety events logged"
             onClick={() => navigate('/incident-log')}
           />
           <KpiTile
-            label="Open CAPAs"
-            value={totalOpenCapas}
-            accent="warning"
-            icon={<ListTodo />}
-            trendLabel="require action"
-            onClick={() => navigate('/action-tracker')}
-          />
-          <KpiTile
-            label="Overdue Actions"
-            value={overdueCapas}
-            accent={overdueCapas > 0 ? 'danger' : 'success'}
-            icon={<Timer />}
-            trendLabel="past due date"
-            onClick={() => navigate('/action-tracker')}
-          />
-          <KpiTile
-            label="Training Manhours"
-            value={totalTrainingManhours}
-            unit="hrs"
+            label="Training Hrs"
+            value={totalTrainingManhours.toLocaleString()}
             accent="success"
             icon={<BookOpen />}
-            trendLabel="logged to date"
+            subtleLine={`${totalTrainingSessions} participants`}
             onClick={() => navigate('/training-records')}
           />
           <KpiTile
-            label="High-Risk Hazards"
-            value={highCriticalHazards}
-            accent={highCriticalHazards > 0 ? 'warning' : 'success'}
-            icon={<ShieldAlert />}
-            trendLabel="high & critical"
-            onClick={() => navigate('/hazard-reporting')}
-          />
-          <KpiTile
-            label="CAPA Closure Rate"
+            label="CAPA Closure %"
             value={closureRateCAPA}
             unit="%"
             accent={closureRateCAPA >= 80 ? 'success' : closureRateCAPA >= 50 ? 'warning' : 'danger'}
             icon={<CheckCircle2 />}
-            trendLabel="of total CAPAs"
+            subtleLine={`${totalClosedCapas}/${capas.length} CAPAs done`}
             onClick={() => navigate('/action-tracker')}
           />
+          <KpiTile
+            label="High-Risk Hazards"
+            value={highCriticalHazards}
+            accent={highCriticalHazards > 0 ? 'danger' : 'success'}
+            icon={<ShieldAlert />}
+            subtleLine="Requires immediate action"
+            onClick={() => navigate('/hazard-reporting')}
+          />
         </div>
+
+        {/* ============ LEADING & LAGGING STRIP (Stitch design) ============ */}
+        <Panel className="p-5">
+          <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-4">Leading &amp; Lagging Indicators</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-4">
+            {[
+              { label: 'Fatalities',    value: fatalities,        color: '#7B1010',  bg: '#FEF2F2',  onClick: () => navigate('/incident-log') },
+              { label: 'LTI',          value: ltiCases,          color: '#1C1C1E',  bg: 'white',    onClick: () => navigate('/incident-log') },
+              { label: 'LTIR',         value: (ltiCases / Math.max(1, totalTrainingManhours / 200000)).toFixed(2), color: '#1C1C1E', bg: 'white', onClick: undefined },
+              { label: 'TRIR',         value: ((ltiCases + firstAidCases) / Math.max(1, totalTrainingManhours / 200000)).toFixed(2), color: '#1C1C1E', bg: 'white', onClick: undefined },
+              { label: 'Hazard Spotting', value: totalHazards.toLocaleString(), color: '#92400E', bg: '#FEF9EC', onClick: () => navigate('/hazard-reporting') },
+            ].map(({ label, value, color, bg, onClick: hdl }) => (
+              <div
+                key={label}
+                onClick={hdl}
+                className={`flex flex-col items-center justify-center text-center rounded-lg p-4 ${hdl ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}`}
+                style={{ backgroundColor: bg, border: '1px solid #E8E0C8' }}
+              >
+                <span className="text-[28px] font-bold tabular-nums" style={{ color }}>{value}</span>
+                <span className="text-[11px] font-medium mt-1" style={{ color: '#9CA3AF' }}>{label}</span>
+              </div>
+            ))}
+          </div>
+        </Panel>
 
         {/* ============ ROW 2 — Leading / Lagging Summary ============ */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -597,6 +630,24 @@ export const Dashboard = () => {
               </div>
             )}
           </Panel>
+        </div>
+
+        {/* ============ ROW 6 — PLANT PHOTO CARDS (Stitch Dashboard) ============ */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <PlantPhotoCard
+            imageUrl="/plant-sukkur.jpg"
+            title="LU Sukkur Plant"
+            subtitle="Operational Excellence & Safety Compliance"
+            location="Sukkur Plant Operations"
+            onClick={() => navigate('/hazard-reporting')}
+          />
+          <PlantPhotoCard
+            imageUrl="/plant-map.jpg"
+            title="Asset Safety Mapping"
+            subtitle="Real-time Hazard Tracking Grid"
+            badge="REPORT INCIDENT"
+            onClick={() => navigate('/incident-log')}
+          />
         </div>
 
       </div>

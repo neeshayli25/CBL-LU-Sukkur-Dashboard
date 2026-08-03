@@ -15,6 +15,12 @@ import {
   CheckCircle2, LayoutGrid, Filter, PanelRightOpen,
   Upload, Paperclip, FileText, Eye, CalendarDays,
 } from 'lucide-react';
+import { LinkedSourceBadge } from './LinkedSourceBadge';
+import { AvatarInitials } from './AvatarInitials';
+import { DepartmentStatusBar } from './DepartmentStatusBar';
+import { MyPendingWidget } from './MyPendingWidget';
+import { IncidentCard } from './IncidentCard';
+import { SafetyEventTimeline } from './SafetyEventTimeline';
 
 interface DataEntrySectionProps {
   schema: SectionConfig;
@@ -139,8 +145,27 @@ const ActionTrackerWorkspace = ({
         </div>
       </ContextHeader>
 
-      <div className="p-6 space-y-5">
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <div className="p-6 flex flex-col xl:flex-row gap-6">
+        {/* Sidebar */}
+        <div className="w-full xl:w-[280px] shrink-0 space-y-4">
+          <div className={`${CARD} p-4 space-y-4`}>
+            <h3 className="text-[12px] font-bold text-[#374151] uppercase tracking-wide border-b border-[#F0F0F0] pb-2">Department Status</h3>
+            <div className="space-y-4">
+              <DepartmentStatusBar name="Operations" openCount={14} maxCount={25} color="#7B1010" />
+              <DepartmentStatusBar name="Maintenance" openCount={8} maxCount={25} color="#D97706" />
+              <DepartmentStatusBar name="Engineering" openCount={3} maxCount={25} color="#16A34A" />
+            </div>
+          </div>
+          
+          <MyPendingWidget actions={[
+            { id: '1', title: 'Fix broken guardrail', dueDate: '2026-08-01', isOverdue: true, sourceId: 'HAZ-129' },
+            { id: '2', title: 'Update lockout tags', dueDate: '2026-08-10', isOverdue: false, sourceId: 'AUD-044' },
+          ]} />
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 space-y-5">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {loading ? (
             <p className="text-[13px] text-[#9CA3AF]">Loading records...</p>
           ) : cards.length === 0 ? (
@@ -155,16 +180,19 @@ const ActionTrackerWorkspace = ({
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[#9CA3AF]">{card.linked_id || card.id}</p>
-                  <h3 className="text-[15px] font-semibold text-[#1A1818] mt-1">{card.action}</h3>
+                  <LinkedSourceBadge id={card.linked_id || `CAPA-${card.id}`} />
+                  <h3 className="text-[15px] font-semibold text-[#1A1818] mt-2">{card.action}</h3>
                 </div>
                 <StatusBadge status={card.status_id} />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5">
                 <div>
-                  <p className="text-[11px] uppercase tracking-wide text-[#9CA3AF] font-semibold">Responsible Person</p>
-                  <p className="text-[13px] text-[#1A1818] mt-1">{card.assigned_to}</p>
+                  <p className="text-[11px] uppercase tracking-wide text-[#9CA3AF] font-semibold mb-1.5">Responsible Person</p>
+                  <div className="flex items-center gap-2">
+                    <AvatarInitials name={card.assigned_to || 'Unassigned'} size="xs" />
+                    <p className="text-[13px] text-[#1A1818] font-medium">{card.assigned_to}</p>
+                  </div>
                 </div>
                 <div>
                   <p className="text-[11px] uppercase tracking-wide text-[#9CA3AF] font-semibold">Due Date</p>
@@ -206,6 +234,8 @@ const ActionTrackerWorkspace = ({
         </div>
       </div>
 
+      </div>
+
       <CenterModal
         isOpen={showAddCard}
         onClose={() => setShowAddCard(false)}
@@ -237,6 +267,176 @@ const ActionTrackerWorkspace = ({
 
 const ActionTrackerRoute = ({ schema }: { schema: SectionConfig }) => {
   return <ActionTrackerWorkspace schema={schema} />;
+};
+
+const IncidentLogWorkspace = ({ schema }: { schema: SectionConfig }) => {
+  const { data: incidents, loading, fetchAll } = useModuleData(schema.id);
+  const [showAddModal, setShowAddModal] = useState(false);
+
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
+
+  return (
+    <Layout>
+      <ContextHeader
+        title={schema.title}
+        breadcrumbs={[schema.title]}
+        subtitle="Log, track, and investigate safety incidents"
+        actions={[
+          { label: 'Report Incident', icon: <Plus />, onClick: () => setShowAddModal(true), variant: 'primary' }
+        ]}
+      >
+        <FilterBar />
+      </ContextHeader>
+
+      <div className="p-6 flex flex-col xl:flex-row gap-6">
+        {/* Main Content (Left) */}
+        <div className="flex-1 space-y-4">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-[14px] font-bold text-[#1C1C1E]">Recent Incidents</h2>
+            <span className="text-[12px] text-[#6B7280]">{incidents.length} records</span>
+          </div>
+
+          {loading ? (
+            <p className="text-[13px] text-[#9CA3AF]">Loading incidents...</p>
+          ) : incidents.length === 0 ? (
+            <p className="text-[13px] text-[#9CA3AF]">No incidents found.</p>
+          ) : (
+            <div className="space-y-3">
+              {incidents.map((inc: any) => (
+                <IncidentCard key={inc.id} incident={inc} onClick={() => undefined} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Sidebar (Right) */}
+        <div className="w-full xl:w-[320px] shrink-0 space-y-5">
+          <SafetyEventTimeline
+            title="Recent Critical Events"
+            events={[
+              { id: '1', type: 'critical', time: 'Today, 08:30 AM', title: 'LTI Reported - Packaging', description: 'Worker sustained injury to hand.' },
+              { id: '2', type: 'warning', time: 'Yesterday, 02:15 PM', title: 'High Risk Hazard', description: 'Spill near main electrical panel.' },
+              { id: '3', type: 'info', time: '2 Days Ago', title: 'CAPA Closed', description: 'Fixed guardrail at loading bay.' },
+            ]}
+          />
+          
+          <div className={`${CARD} p-5`}>
+            <h3 className="text-[12px] font-bold text-[#374151] uppercase tracking-wide mb-4">Quick Links</h3>
+            <div className="flex flex-wrap gap-2">
+              <LinkedSourceBadge id="CAPA-Dashboard" type="AUD" onClick={() => undefined} />
+              <LinkedSourceBadge id="Hazards-Open" type="HAZ" onClick={() => undefined} />
+              <LinkedSourceBadge id="NearMiss-Log" type="NM" onClick={() => undefined} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </Layout>
+  );
+};
+
+const NearMissWorkspace = ({ schema }: { schema: SectionConfig }) => {
+  const { data: nearMisses, loading, fetchAll, createRecord } = useModuleData(schema.id);
+  const [formData, setFormData] = useState<any>({});
+
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const result = await createRecord(formData);
+    if (result.success) setFormData({});
+  };
+
+  return (
+    <Layout>
+      <ContextHeader
+        title={schema.title}
+        breadcrumbs={[schema.title]}
+        subtitle="Report and track near miss observations"
+        actions={[
+          { label: 'Submit Report', icon: <Save />, onClick: () => document.getElementById('nm-submit-btn')?.click(), variant: 'primary' }
+        ]}
+      />
+
+      <div className="p-6 flex flex-col xl:flex-row gap-6">
+        {/* Main Form (Left) */}
+        <div className="flex-1 max-w-4xl space-y-4">
+          <form onSubmit={handleSubmit} className={`${CARD} p-5`}>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-1 h-5 rounded-full" style={{ backgroundColor: '#7B1010' }} />
+              <h2 className="text-[14px] font-bold text-[#1C1C1E]">Near Miss Details</h2>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {schema.columns.filter(c => !c.hideFromForm).map(col => (
+                <div key={col.key} className={col.type === 'textarea' || col.type === 'file' ? 'md:col-span-2' : ''}>
+                  <label className="block text-[12px] font-semibold text-[#374151] mb-1.5 uppercase tracking-wide">
+                    {col.label}
+                    {col.required && <span className="text-[var(--brand-maroon)] ml-1">*</span>}
+                  </label>
+                  {col.type === 'textarea' ? (
+                    <textarea 
+                      value={formData[col.key] || ''} 
+                      onChange={e => setFormData({ ...formData, [col.key]: e.target.value })}
+                      className="w-full min-h-[92px] px-3 py-2 text-[13px] border border-[#DEDEDE] rounded-md focus:border-[#7B1010] focus:ring-1 focus:ring-[#7B1010]/20"
+                      required={col.required}
+                    />
+                  ) : col.type === 'select' ? (
+                    <select 
+                      value={formData[col.key] || ''} 
+                      onChange={e => setFormData({ ...formData, [col.key]: e.target.value })}
+                      className="w-full min-h-9 px-3 py-2 text-[13px] border border-[#DEDEDE] rounded-md focus:border-[#7B1010] focus:ring-1 focus:ring-[#7B1010]/20"
+                      required={col.required}
+                    >
+                      <option value="">Select...</option>
+                      {col.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                    </select>
+                  ) : (
+                    <input 
+                      type={col.type} 
+                      value={formData[col.key] || ''} 
+                      onChange={e => setFormData({ ...formData, [col.key]: e.target.value })}
+                      className="w-full min-h-9 px-3 py-2 text-[13px] border border-[#DEDEDE] rounded-md focus:border-[#7B1010] focus:ring-1 focus:ring-[#7B1010]/20"
+                      required={col.required}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+            <button id="nm-submit-btn" type="submit" className="hidden">Submit</button>
+          </form>
+        </div>
+
+        {/* Recent Logs Sidebar (Right) */}
+        <div className="w-full xl:w-[320px] shrink-0 space-y-4">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-[14px] font-bold text-[#1C1C1E]">Recent Logs</h2>
+          </div>
+          
+          <div className="space-y-3">
+            {loading ? (
+              <p className="text-[13px] text-[#9CA3AF]">Loading...</p>
+            ) : nearMisses.length === 0 ? (
+              <p className="text-[13px] text-[#9CA3AF]">No recent logs.</p>
+            ) : (
+              nearMisses.slice(0, 5).map(nm => (
+                <div key={nm.id} className="bg-white border border-[#E8E0C8] rounded-lg p-3 hover:bg-[#FAFAFA] cursor-pointer">
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <span className="text-[11px] font-bold text-[#9CA3AF] uppercase">{nm.id || 'NM'}</span>
+                    <span className="text-[10px] text-[#6B7280]">{nm.date}</span>
+                  </div>
+                  <p className="text-[12px] font-medium text-[#1C1C1E] line-clamp-2">{nm.description}</p>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    </Layout>
+  );
 };
 
 const MergedAuditInspectionWorkspace = ({ activeSchema }: { activeSchema: SectionConfig }) => {
@@ -331,6 +531,14 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
 
   if (schema.id === 'action-tracker') {
     return <ActionTrackerRoute schema={schema} />;
+  }
+  
+  if (schema.id === 'incident-log') {
+    return <IncidentLogWorkspace schema={schema} />;
+  }
+  
+  if (schema.id === 'near-miss') {
+    return <NearMissWorkspace schema={schema} />;
   }
 
   const { data: entries, loading, fetchAll, createRecord, updateRecord, deleteRecord } = useModuleData(schema.id);

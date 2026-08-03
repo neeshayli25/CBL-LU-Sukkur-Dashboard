@@ -10,8 +10,8 @@
        Brand Source: CBL LU Logo — Crimson #CB0017
        ============================================ */
 
-    /* Shell Workspace Background (SAP grey — not white) */
-    --background: 0 0% 96%;        /* #F5F5F5 */
+    /* Shell Workspace Background */
+    --background: 42 20% 95%;      /* #F5F0DC Warm Linen */
     --background-alt: 220 14% 96%; /* #F3F4F6 */
 
     /* Card / Panel Surface (pure white) */
@@ -65,8 +65,29 @@
     --destructive: 353 80% 38%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Border radius — Enterprise is sharp, max 6px */
-    --radius: 0.375rem;
+    /* Border radius — Enterprise 8px cards, 6px buttons */
+    --radius: 0.5rem;
+
+    /* ============================================
+       STITCH DESIGN TOKENS (Phase 16 Design Migration)
+       ============================================ */
+
+    /* Sidebar — Deep maroon from Stitch design */
+    --sidebar-bg: #7B1010;
+    --sidebar-active-bg: rgba(255,255,255,0.15);
+    --sidebar-hover-bg: rgba(255,255,255,0.08);
+    --sidebar-text: rgba(255,255,255,0.85);
+    --sidebar-text-muted: rgba(255,255,255,0.50);
+    --sidebar-border: rgba(255,255,255,0.10);
+    --sidebar-group-label: rgba(255,255,255,0.35);
+
+    /* Page workspace — warm linen from Stitch design */
+    --workspace-bg: #F5F0DC;
+
+    /* Brand maroon — primary buttons, active accents */
+    --brand-maroon: #7B1010;
+    --brand-maroon-hover: #5E0C0C;
+    --brand-maroon-light: rgba(123,16,16,0.08);
   }
 
   .dark {

@@ -15,6 +15,8 @@ interface KpiTileProps {
   /** Positive = up trend, negative = down trend */
   trend?: number;
   trendLabel?: string;
+  /** Optional descriptive sub-line shown below the value (e.g. "Reports vs Prev Year") */
+  subtleLine?: string;
   icon: React.ReactNode;
   accent?: AccentColor;
   onClick?: () => void;
@@ -22,10 +24,10 @@ interface KpiTileProps {
 }
 
 const ACCENT_MAP: Record<AccentColor, { bar: string; iconBg: string; iconColor: string }> = {
-  primary: { bar: '#CB0017', iconBg: '#FFF7F7', iconColor: '#CB0017' },
-  danger:  { bar: '#B3001B', iconBg: '#FEF2F2', iconColor: '#B3001B' },
-  warning: { bar: '#DC8E00', iconBg: '#FFFBEB', iconColor: '#B45309' },
-  success: { bar: '#1B7C1B', iconBg: '#ECFDF5', iconColor: '#065F46' },
+  primary: { bar: '#7B1010', iconBg: 'rgba(123,16,16,0.08)', iconColor: '#7B1010' },
+  danger:  { bar: '#B91C1C', iconBg: '#FEF2F2', iconColor: '#B91C1C' },
+  warning: { bar: '#D97706', iconBg: '#FFFBEB', iconColor: '#B45309' },
+  success: { bar: '#16A34A', iconBg: '#ECFDF5', iconColor: '#15803D' },
   info:    { bar: '#0C71D1', iconBg: '#EFF6FF', iconColor: '#1D4ED8' },
   neutral: { bar: '#6B7280', iconBg: '#F9FAFB', iconColor: '#374151' },
 };
@@ -36,6 +38,7 @@ export const KpiTile: React.FC<KpiTileProps> = ({
   unit,
   trend,
   trendLabel,
+  subtleLine,
   icon,
   accent = 'primary',
   onClick,
@@ -58,17 +61,17 @@ export const KpiTile: React.FC<KpiTileProps> = ({
 
   return (
     <div
-      className={`bg-white border border-[#E0E0E0] rounded-lg flex flex-col relative overflow-hidden transition-shadow duration-150
-        ${onClick ? 'cursor-pointer hover:shadow-[0_3px_14px_0_rgba(0,0,0,0.10)]' : 'hover:shadow-[0_2px_8px_0_rgba(0,0,0,0.08)]'}
+      className={`bg-white border border-[#E8E0C8] rounded-lg flex flex-col relative overflow-hidden transition-shadow duration-150
+        ${onClick ? 'cursor-pointer hover:shadow-[0_4px_16px_0_rgba(0,0,0,0.12)]' : 'hover:shadow-[0_2px_8px_0_rgba(0,0,0,0.08)]'}
         ${className}`}
-      style={{ boxShadow: '0 1px 4px 0 rgba(0,0,0,0.06)', padding: '16px' }}
+      style={{ boxShadow: '0 1px 3px 0 rgba(0,0,0,0.08)', padding: '20px' }}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
     >
-      {/* Top accent bar */}
+      {/* Top accent bar — 4px matching Stitch */}
       <div
-        className="absolute top-0 left-0 right-0 h-[3px]"
+        className="absolute top-0 left-0 right-0 h-1"
         style={{ backgroundColor: a.bar }}
       />
 
@@ -89,17 +92,22 @@ export const KpiTile: React.FC<KpiTileProps> = ({
       </div>
 
       {/* Value */}
-      <div className="flex items-baseline gap-1.5">
+      <div className="flex items-baseline gap-1.5 mt-1">
         <span
           className="leading-none tabular-nums"
-          style={{ fontSize: '26px', fontWeight: 700, color: '#1A1818' }}
+          style={{ fontSize: '32px', fontWeight: 700, color: '#1C1C1E' }}
         >
           {value}
         </span>
         {unit && (
-          <span className="text-[13px] font-medium" style={{ color: '#9CA3AF' }}>{unit}</span>
+          <span className="text-[14px] font-semibold" style={{ color: '#6B7280' }}>{unit}</span>
         )}
       </div>
+
+      {/* Subtle description line */}
+      {subtleLine && (
+        <p className="text-[11px] mt-1" style={{ color: '#9CA3AF' }}>{subtleLine}</p>
+      )}
 
       {/* Trend */}
       {(trend !== undefined || trendLabel) && (
