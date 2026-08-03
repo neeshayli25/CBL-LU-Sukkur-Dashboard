@@ -78,12 +78,6 @@ const DatePickerField = ({
     </div>
   );
 };
-const ACTION_SAMPLE_CARDS = [
-  { id: 'A-101', action: 'Replace worn cable tray covers', responsiblePerson: 'Muhammad Ali', dueDate: '2026-08-03', status: 'Open', completionDate: '', remarks: 'High priority near line 2' },
-  { id: 'A-102', action: 'Brief contractors on permit controls', responsiblePerson: 'Sana Khan', dueDate: '2026-08-08', status: 'In Progress', completionDate: '', remarks: 'Daily toolbox talk assigned' },
-  { id: 'A-103', action: 'Close out housekeeping observations', responsiblePerson: 'Zeeshan Noor', dueDate: '2026-08-01', status: 'Submitted for Review', completionDate: '', remarks: 'Awaiting reviewer approval' },
-];
-
 const moduleSections = (schema: SectionConfig) => {
   const sections = new Map<string, ColumnSchema[]>();
   schema.columns.filter(c => !c.hideFromForm).forEach(col => {
@@ -113,17 +107,21 @@ const ActionTrackerWorkspace = ({
 }: {
   schema: SectionConfig;
 }) => {
-  const [cards] = useState(ACTION_SAMPLE_CARDS);
+  const { data: cards, loading, fetchAll, updateRecord, deleteRecord, createRecord } = useModuleData(schema.id);
   const [showAddCard, setShowAddCard] = useState(false);
-  const [activeCardId, setActiveCardId] = useState<string | null>(ACTION_SAMPLE_CARDS[0]?.id ?? null);
+  const [activeCardId, setActiveCardId] = useState<string | null>(null);
   const [formData, setFormData] = useState<any>({});
+
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
 
   return (
     <Layout>
       <ContextHeader
         title={schema.title}
         breadcrumbs={[schema.title]}
-        subtitle="Repeatable action cards with mock completion workflow"
+        subtitle="Live Action Tracker connected to enterprise backend"
         actions={[
           {
             label: 'New Action',
@@ -143,7 +141,11 @@ const ActionTrackerWorkspace = ({
 
       <div className="p-6 space-y-5">
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-          {cards.map(card => (
+          {loading ? (
+            <p className="text-[13px] text-[#9CA3AF]">Loading records...</p>
+          ) : cards.length === 0 ? (
+            <p className="text-[13px] text-[#9CA3AF]">No action records found.</p>
+          ) : cards.map(card => (
             <div
               key={card.id}
               className={`${CARD} p-5 transition-all hover:shadow-[0_3px_14px_rgba(0,0,0,0.10)] ${
@@ -153,24 +155,24 @@ const ActionTrackerWorkspace = ({
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[#9CA3AF]">{card.id}</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[#9CA3AF]">{card.linked_id || card.id}</p>
                   <h3 className="text-[15px] font-semibold text-[#1A1818] mt-1">{card.action}</h3>
                 </div>
-                <StatusBadge status={card.status} />
+                <StatusBadge status={card.status_id} />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5">
                 <div>
                   <p className="text-[11px] uppercase tracking-wide text-[#9CA3AF] font-semibold">Responsible Person</p>
-                  <p className="text-[13px] text-[#1A1818] mt-1">{card.responsiblePerson}</p>
+                  <p className="text-[13px] text-[#1A1818] mt-1">{card.assigned_to}</p>
                 </div>
                 <div>
                   <p className="text-[11px] uppercase tracking-wide text-[#9CA3AF] font-semibold">Due Date</p>
-                  <p className="text-[13px] text-[#1A1818] mt-1">{card.dueDate}</p>
+                  <p className="text-[13px] text-[#1A1818] mt-1">{card.due_date}</p>
                 </div>
                 <div>
                   <p className="text-[11px] uppercase tracking-wide text-[#9CA3AF] font-semibold">Completion Date</p>
-                  <p className="text-[13px] text-[#1A1818] mt-1">{card.completionDate || 'Pending'}</p>
+                  <p className="text-[13px] text-[#1A1818] mt-1">{card.completion_date || 'Pending'}</p>
                 </div>
                 <div>
                   <p className="text-[11px] uppercase tracking-wide text-[#9CA3AF] font-semibold">Remarks</p>

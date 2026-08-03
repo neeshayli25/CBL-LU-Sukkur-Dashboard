@@ -199,6 +199,14 @@ export const Dashboard = () => {
       }
     };
     fetchData();
+
+    const handleRefresh = () => {
+      fetchData();
+    };
+    window.addEventListener('dashboard-refresh', handleRefresh);
+    return () => {
+      window.removeEventListener('dashboard-refresh', handleRefresh);
+    };
   }, [filters]);
 
   const { leadingMetricsDetail, laggingMetricsDetail } = useDashboardMetrics(rawData);

@@ -2,8 +2,7 @@ import { useMsal } from "@azure/msal-react";
 import { useAuthStore } from "../store/authStore";
 import { useState } from "react";
 
-// TOGGLE THIS FLAG TO RE-ENABLE REAL BACKEND/MSAL LOGIN
-const BYPASS_AUTH = true;
+
 
 export const useAuth = () => {
   const { instance } = useMsal();
@@ -15,20 +14,6 @@ export const useAuth = () => {
     setIsLoggingIn(true);
     setError(null);
     try {
-      if (BYPASS_AUTH) {
-        // TEMPORARY BYPASS: Skip MSAL and backend completely
-        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
-        const fakeUser = {
-          id: "999",
-          email: "testuser@lu-sukkur.com",
-          role: "System Administrator", // Change this to test different roles
-          get name() { return `${this.role} (Bypass)`; },
-          department_id: "HSE"
-        };
-        loginUser(fakeUser, "fake-dev-token");
-        return;
-      }
-
       // 1. Authenticate with Microsoft
       const loginResponse = await instance.loginPopup({
         scopes: ["user.read"],
@@ -41,36 +26,24 @@ export const useAuth = () => {
       }
 
       // 2. Verify with Ali's Live Backend
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
-      const verifyResponse = await fetch(`${apiUrl}/auth/verify-email`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
+      const { authClient } = await import('@cbl/api/src/authClient');
+      const verifyResponse = await authClient.verifyEmail(email);
 
-      if (!verifyResponse.ok) {
-        if (verifyResponse.status === 404) {
-          throw new Error("User not authorized in CBL system");
-        }
-        throw new Error(`Backend Error: ${verifyResponse.statusText}`);
-      }
-
-      const result = await verifyResponse.json();
-      
-      if (!result.success) {
-        throw new Error(result.message || "Verification failed");
+      if (!verifyResponse.authorized || !verifyResponse.user || !verifyResponse.tokens) {
+        throw new Error("User not authorized in CBL system or no token received");
       }
 
       // 3. Set User securely
+      const backendUser = verifyResponse.user;
       const authUser = {
-        id: result.data.id.toString(),
-        email: result.data.email,
-        name: result.data.name,
-        role: result.data.role,
-        department_id: result.data.department_id?.toString()
+        id: backendUser.id.toString(),
+        email: backendUser.email,
+        name: backendUser.name || `${backendUser.firstName || ''} ${backendUser.lastName || ''}`.trim(),
+        role: backendUser.role || (backendUser.roles?.[0]) || 'Viewer',
+        department_id: backendUser.department_id?.toString() || backendUser.departmentId?.toString()
       };
 
-      loginUser(authUser, loginResponse.idToken || "msal-token");
+      loginUser(authUser, verifyResponse.tokens.accessToken);
     } catch (e: any) {
       console.error("Login Error:", e);
       setError(e.message || "Failed to login");
@@ -79,7 +52,13 @@ export const useAuth = () => {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      const { authClient } = await import('@cbl/api/src/authClient');
+      await authClient.logout();
+    } catch (e) {
+      console.error("Backend logout error:", e);
+    }
     instance.logoutPopup().catch(console.error);
     clearAuth();
   };

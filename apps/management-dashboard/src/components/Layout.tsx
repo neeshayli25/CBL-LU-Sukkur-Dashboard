@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth, usePermissions } from '@cbl/auth';
+import { useNotifications } from '../hooks/useNotifications';
 import {
   LayoutDashboard, FileText, BarChart3, Settings, LogOut,
   ChevronRight, ChevronLeft, Menu, Bell, ChevronDown, X,
@@ -60,12 +61,6 @@ const NAV_GROUPS = [
   },
 ] as const;
 
-const MOCK_NOTIFICATIONS = [
-  { id: 1, title: 'CAPA #42 is Overdue', detail: 'Assigned to Ahmad — Due 3 days ago', time: '2h ago', type: 'danger' as const, link: '/action-tracker' },
-  { id: 2, title: 'High-Priority Hazard Reported', detail: 'Electrical hazard in PROD', time: '5h ago', type: 'warning' as const, link: '/hazard-reporting' },
-  { id: 3, title: 'Monthly Report Ready', detail: 'July 2026 Incident Summary', time: '1d ago', type: 'info' as const, link: '/reports' },
-];
-
 const NOTIF_TYPE = {
   danger:  { dot: '#EF4444', line: '#FEE2E2' },
   warning: { dot: '#F59E0B', line: '#FEF9C3' },
@@ -90,6 +85,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
   const [showNotifications, setShowNotifications]  = useState(false);
   const [userMenuOpen,      setUserMenuOpen]       = useState(false);
 
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const { logout, user }      = useAuth();
   const { canViewReports }    = usePermissions();
   const navigate              = useNavigate();
@@ -198,7 +194,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
               className="relative flex items-center justify-center w-8 h-8 rounded text-white/60 hover:text-white hover:bg-white/10 transition-colors"
             >
               <Bell className="h-[18px] w-[18px]" />
-              {MOCK_NOTIFICATIONS.length > 0 && (
+              {unreadCount > 0 && (
                 <span
                   className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full border-2"
                   style={{ backgroundColor: '#CB0017', borderColor: '#1A1818' }}
@@ -221,10 +217,17 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                 >
                   <div className="flex items-center justify-between px-5 py-4 border-b border-[#F0F0F0] bg-[#FAFAFA]">
                     <h3 className="text-[14px] font-bold text-[#1A1818]">
-                      Notifications <span className="text-[#CB0017] ml-1">{MOCK_NOTIFICATIONS.length}</span>
+                      Notifications {unreadCount > 0 && <span className="text-[#CB0017] ml-1">{unreadCount}</span>}
                     </h3>
                     <div className="flex items-center gap-3">
-                      <button className="text-[12px] text-[#CB0017] font-medium hover:underline">Mark all read</button>
+                      {unreadCount > 0 && (
+                        <button 
+                          className="text-[12px] text-[#CB0017] font-medium hover:underline"
+                          onClick={markAllAsRead}
+                        >
+                          Mark all read
+                        </button>
+                      )}
                       <button 
                         onClick={() => setShowNotifications(false)}
                         className="w-7 h-7 flex items-center justify-center rounded-md text-[#9CA3AF] hover:text-[#1A1818] hover:bg-[#E5E7EB] transition-colors"
@@ -235,27 +238,37 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                   </div>
                   
                   <div className="flex-1 overflow-y-auto">
-                    {MOCK_NOTIFICATIONS.map(n => {
-                      const cfg = NOTIF_TYPE[n.type];
-                      return (
-                        <div
-                          key={n.id}
-                          className="flex gap-3 px-5 py-4 border-b border-[#F7F7F7] hover:bg-[#F9FAFB] cursor-pointer transition-colors"
-                          onClick={() => { navigate(n.link); setShowNotifications(false); }}
-                        >
-                          <span
-                            className="mt-1.5 rounded-full shrink-0"
-                            style={{ width: 8, height: 8, backgroundColor: cfg.dot, marginTop: 6 }}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[13px] font-medium text-[#1A1818] leading-snug">{n.title}</p>
-                            <p className="text-[11px] text-[#6B7280] mt-1 line-clamp-2">{n.detail}</p>
-                            <p className="text-[10px] text-[#9CA3AF] mt-1.5">{n.time}</p>
+                    {notifications.length === 0 ? (
+                      <div className="py-8 text-center px-4 text-[#9CA3AF] text-[13px]">
+                        No new notifications
+                      </div>
+                    ) : (
+                      notifications.map(n => {
+                        const cfg = NOTIF_TYPE[n.type as keyof typeof NOTIF_TYPE] || NOTIF_TYPE.info;
+                        return (
+                          <div
+                            key={n.id}
+                            className={`flex gap-3 px-5 py-4 border-b border-[#F7F7F7] hover:bg-[#F9FAFB] cursor-pointer transition-colors ${n.read ? 'opacity-60' : ''}`}
+                            onClick={() => {
+                              markAsRead(n.id);
+                              if (n.link) navigate(n.link);
+                              setShowNotifications(false);
+                            }}
+                          >
+                            <span
+                              className="mt-1.5 rounded-full shrink-0"
+                              style={{ width: 8, height: 8, backgroundColor: cfg.dot, marginTop: 6 }}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[13px] font-medium text-[#1A1818] leading-snug">{n.title}</p>
+                              <p className="text-[11px] text-[#6B7280] mt-1 line-clamp-2">{n.message}</p>
+                              <p className="text-[10px] text-[#9CA3AF] mt-1.5">{new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                            </div>
+                            <ExternalLink className="h-3 w-3 text-[#D0D0D0] mt-1 shrink-0" />
                           </div>
-                          <ExternalLink className="h-3 w-3 text-[#D0D0D0] mt-1 shrink-0" />
-                        </div>
-                      );
-                    })}
+                        );
+                      })
+                    )}
                   </div>
                   
                   <div className="p-4 border-t border-[#F0F0F0] bg-[#FAFAFA]">
