@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getSocket, connectSocket, disconnectSocket } from '../services/api/socketClient';
+import { apiClient } from '@cbl/api';
 
 export interface Notification {
   id: string;
@@ -16,6 +17,12 @@ export const useNotifications = () => {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
+    apiClient.get('/notifications').then((response) => {
+      const data = response.data?.data ?? response.data;
+      const rows = Array.isArray(data) ? data : data?.rows || [];
+      setNotifications(rows);
+      setUnreadCount(rows.filter((notification: Notification) => !notification.read).length);
+    }).catch((error) => console.error('Notification load failed', error));
     connectSocket();
     const socket = getSocket();
 
@@ -63,17 +70,16 @@ export const useNotifications = () => {
     };
   }, []);
 
-  const markAsRead = (id: string) => {
+  const markAsRead = async (id: string) => {
+    await apiClient.patch(`/notifications/${id}/read`).catch((error) => console.error('Notification update failed', error));
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
     setUnreadCount(prev => Math.max(0, prev - 1));
-    // Optionally emit to backend
-    // getSocket().emit('notification:read', { id });
   };
 
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
+    await apiClient.patch('/notifications/read-all').catch((error) => console.error('Notification update failed', error));
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     setUnreadCount(0);
-    // getSocket().emit('notification:readAll');
   };
 
   return { notifications, unreadCount, markAsRead, markAllAsRead };

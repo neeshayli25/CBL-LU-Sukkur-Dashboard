@@ -5,7 +5,9 @@ import {
   FileWarning, 
   CheckSquare, 
   Users, 
-  Briefcase 
+  Briefcase,
+  ClipboardList,
+  BookOpen
 } from 'lucide-react';
 
 export const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -14,5 +16,7 @@ export const iconMap: Record<string, React.ComponentType<{ className?: string }>
   FileWarning,
   CheckSquare,
   Users,
-  Briefcase
+  Briefcase,
+  ClipboardList,
+  BookOpen
 };

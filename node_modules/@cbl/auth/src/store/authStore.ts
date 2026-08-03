@@ -1,13 +1,16 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import { jwtDecode } from "jwt-decode";
+import { tokenStore } from "@cbl/api";
 
 export interface User {
   id: string;
   email: string;
   name: string;
   role: string;
+  roles?: string[];
+  permissions?: string[];
   department_id?: string;
+  plant_id?: string;
 }
 
 interface AuthState {
@@ -18,11 +21,10 @@ interface AuthState {
   loginUser: (user: User, token?: string) => void;
   clearAuth: () => void;
   hasRole: (role: string) => boolean;
+  hasPermission: (permission: string) => boolean;
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set, get) => ({
+export const useAuthStore = create<AuthState>()((set, get) => ({
       token: null,
       user: null,
       isAuthenticated: false,
@@ -30,6 +32,7 @@ export const useAuthStore = create<AuthState>()(
       setToken: (token: string) => {
         try {
           const decodedUser = jwtDecode<User>(token);
+          tokenStore.setTokens({ accessToken: token });
           set({ token, user: decodedUser, isAuthenticated: true });
         } catch (error) {
           console.error("Invalid token", error);
@@ -38,10 +41,12 @@ export const useAuthStore = create<AuthState>()(
       },
 
       loginUser: (user: User, token?: string) => {
+        if (token) tokenStore.setTokens({ accessToken: token });
         set({ user, token: token || null, isAuthenticated: true });
       },
 
       clearAuth: () => {
+        tokenStore.clear();
         set({ token: null, user: null, isAuthenticated: false });
       },
 
@@ -50,9 +55,8 @@ export const useAuthStore = create<AuthState>()(
         if (!user || !user.role) return false;
         return user.role.toLowerCase() === role.toLowerCase();
       },
-    }),
-    {
-      name: "cbl-auth-storage",
-    }
-  )
-);
+
+      hasPermission: (permission: string) => Boolean(
+        get().user?.permissions?.some((item) => item.toLowerCase() === permission.toLowerCase())
+      ),
+    }));

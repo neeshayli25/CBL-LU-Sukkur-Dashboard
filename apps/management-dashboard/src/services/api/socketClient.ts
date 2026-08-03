@@ -1,32 +1,52 @@
-import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '@cbl/auth';
 
-const API_BASE_URL = import.meta.env?.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:5000';
+type Listener = (...args: any[]) => void;
 
-let socket: Socket | null = null;
+class SocketAdapter {
+  private realSocket: any = null;
+  private listeners = new Map<string, Set<Listener>>();
+  auth: Record<string, unknown> = {};
 
-export const getSocket = (): Socket => {
-  if (!socket) {
-    const token = useAuthStore.getState().token;
-    socket = io(API_BASE_URL, {
-      auth: { token },
-      autoConnect: false,
-    });
+  on(event: string, listener: Listener) {
+    if (!this.listeners.has(event)) this.listeners.set(event, new Set());
+    this.listeners.get(event)!.add(listener);
+    this.realSocket?.on(event, listener);
+    return this;
   }
-  return socket;
-};
+
+  off(event: string, listener?: Listener) {
+    if (listener) this.listeners.get(event)?.delete(listener);
+    else this.listeners.delete(event);
+    this.realSocket?.off(event, listener);
+    return this;
+  }
+
+  async connect() {
+    if (!this.realSocket) {
+      const baseUrl = import.meta.env?.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:5000';
+      const module = await import(/* @vite-ignore */ 'socket.io-client');
+      this.realSocket = module.io(baseUrl, { auth: this.auth, autoConnect: false });
+      this.listeners.forEach((listeners, event) => listeners.forEach((listener) => this.realSocket.on(event, listener)));
+    }
+    this.realSocket.auth = this.auth;
+    this.realSocket.connect();
+  }
+
+  disconnect() {
+    this.realSocket?.disconnect();
+  }
+}
+
+const socket = new SocketAdapter();
+
+export const getSocket = () => socket;
 
 export const connectSocket = () => {
-  const s = getSocket();
   const token = useAuthStore.getState().token;
   if (token) {
-    s.auth = { token };
-    s.connect();
+    socket.auth = { token };
+    socket.connect().catch((error) => console.error('Socket connection failed', error));
   }
 };
 
-export const disconnectSocket = () => {
-  if (socket) {
-    socket.disconnect();
-  }
-};
+export const disconnectSocket = () => socket.disconnect();

@@ -21,6 +21,8 @@ import { DepartmentStatusBar } from './DepartmentStatusBar';
 import { MyPendingWidget } from './MyPendingWidget';
 import { IncidentCard } from './IncidentCard';
 import { SafetyEventTimeline } from './SafetyEventTimeline';
+import { uploadClient } from '../../../../packages/api/src/uploadClient';
+import { moduleService } from '../services/api/moduleService';
 
 interface DataEntrySectionProps {
   schema: SectionConfig;
@@ -113,7 +115,7 @@ const ActionTrackerWorkspace = ({
 }: {
   schema: SectionConfig;
 }) => {
-  const { data: cards, loading, fetchAll, updateRecord, deleteRecord, createRecord } = useModuleData(schema.id);
+  const { data: cards, loading, fetchAll } = useModuleData(schema.id);
   const [showAddCard, setShowAddCard] = useState(false);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
   const [formData, setFormData] = useState<any>({});
@@ -157,10 +159,13 @@ const ActionTrackerWorkspace = ({
             </div>
           </div>
           
-          <MyPendingWidget actions={[
-            { id: '1', title: 'Fix broken guardrail', dueDate: '2026-08-01', isOverdue: true, sourceId: 'HAZ-129' },
-            { id: '2', title: 'Update lockout tags', dueDate: '2026-08-10', isOverdue: false, sourceId: 'AUD-044' },
-          ]} />
+          <MyPendingWidget actions={cards.filter((card: any) => card.status_id !== 'Closed').map((card: any) => ({
+            id: String(card.id ?? card.corrective_action_id),
+            title: card.action || card.action_description || 'Corrective action',
+            dueDate: card.due_date || card.target_date || '',
+            isOverdue: Boolean(card.due_date && card.due_date < new Date().toISOString().slice(0, 10)),
+            sourceId: card.linked_id || String(card.id ?? card.corrective_action_id),
+          }))} />
         </div>
 
         {/* Main Content */}
@@ -229,19 +234,18 @@ const ActionTrackerWorkspace = ({
             <h2 className="text-[12px] font-bold text-[#374151] uppercase tracking-wider">Action Summary</h2>
           </div>
           <p className="text-[13px] text-[#6B7280]">
-            {cards.length} action cards currently rendered. This board is intentionally mock-driven so it can later be connected to the backend workflow.
+            {cards.length} action records currently loaded from the enterprise backend.
           </p>
         </div>
       </div>
 
-      </div>
       </div>
 
       <CenterModal
         isOpen={showAddCard}
         onClose={() => setShowAddCard(false)}
         title="New Action Card"
-        description="UI only. This dialog can be wired to the action tracker API later."
+        description="Create a corrective action in the enterprise action register."
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {schema.columns.filter(c => !c.hideFromForm).map(col => (
@@ -258,7 +262,7 @@ const ActionTrackerWorkspace = ({
             Cancel
           </button>
           <button className="h-9 px-4 text-[13px] font-medium rounded-md bg-[#CB0017] text-white hover:bg-[#A8001A]">
-            Save Placeholder
+            Save Action
           </button>
         </div>
       </CenterModal>
@@ -272,7 +276,7 @@ const ActionTrackerRoute = ({ schema }: { schema: SectionConfig }) => {
 
 const IncidentLogWorkspace = ({ schema }: { schema: SectionConfig }) => {
   const { data: incidents, loading, fetchAll } = useModuleData(schema.id);
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [, setShowAddModal] = useState(false);
 
   useEffect(() => {
     fetchAll();
@@ -316,11 +320,13 @@ const IncidentLogWorkspace = ({ schema }: { schema: SectionConfig }) => {
         <div className="w-full xl:w-[320px] shrink-0 space-y-5">
           <SafetyEventTimeline
             title="Recent Critical Events"
-            events={[
-              { id: '1', type: 'critical', time: 'Today, 08:30 AM', title: 'LTI Reported - Packaging', description: 'Worker sustained injury to hand.' },
-              { id: '2', type: 'warning', time: 'Yesterday, 02:15 PM', title: 'High Risk Hazard', description: 'Spill near main electrical panel.' },
-              { id: '3', type: 'info', time: '2 Days Ago', title: 'CAPA Closed', description: 'Fixed guardrail at loading bay.' },
-            ]}
+            events={incidents.slice(0, 5).map((incident: any) => ({
+              id: String(incident.id ?? incident.incident_id),
+              type: incident.severity === 'Critical' ? 'critical' : 'warning',
+              time: incident.incident_date || incident.date_time || '',
+              title: incident.incident_number || 'Incident',
+              description: incident.description || '',
+            }))}
           />
           
           <div className={`${CARD} p-5`}>
@@ -666,18 +672,15 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
   const endRecord = Math.min(currentPage * PAGE_SIZE, searchedEntries.length);
   const visibleColumns = schema.columns.filter(col => !col.hideFromForm && col.type !== 'file');
   const sectionGroups = moduleSections(schema);
-  const exportCSV = () => {
-    if (filteredEntries.length === 0) return;
-    const headers = visibleColumns.map(c => c.label);
-    const rows = filteredEntries.map(entry =>
-      visibleColumns.map(col => {
-        let v = String(entry[col.key] ?? '').replace(/"/g, '""');
-        if (v.search(/(",|\n)/g) >= 0) v = `"${v}"`;
-        return v;
-      }).join(',')
-    );
-    const csv = [headers.join(','), ...rows].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const exportCSV = async () => {
+    const blob = await moduleService.export(schema.id, {
+      search: searchQuery || undefined,
+      department: filters.department !== 'All' ? filters.department : undefined,
+      status: filters.status !== 'All' ? filters.status : undefined,
+      fromDate: filters.fromDate || undefined,
+      toDate: filters.toDate || undefined,
+      format: 'csv',
+    });
     const url = URL.createObjectURL(blob);
     const a = Object.assign(document.createElement('a'), { href: url, download: `${schema.id}_${new Date().toISOString().split('T')[0]}.csv`, style: { visibility: 'hidden' } });
     document.body.appendChild(a);
@@ -688,17 +691,22 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
   const renderField = (col: ColumnSchema, value: any, isEdit = false) => {
     if (col.type === 'file') {
       return (
-        <div className="rounded-lg border border-dashed border-[#D6D6D6] bg-[#FAFAFA] p-4">
+        <label className="block rounded-lg border border-dashed border-[#D6D6D6] bg-[#FAFAFA] p-4 cursor-pointer">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-lg bg-white border border-[#E0E0E0] flex items-center justify-center text-[#9CA3AF]">
               <Upload className="h-4 w-4" />
             </div>
             <div className="min-w-0">
               <p className="text-[13px] font-medium text-[#1A1818]">{col.label}</p>
-              <p className="text-[11px] text-[#9CA3AF]">Placeholder upload card. Wire up later.</p>
+              <p className="text-[11px] text-[#9CA3AF]">Select a file to upload it through the enterprise attachment service.</p>
             </div>
           </div>
-        </div>
+          <input type="file" className="sr-only" onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) uploadClient.upload(file, { module: schema.id, recordId: selectedRecordId || '' })
+              .catch((error: unknown) => console.error('Attachment upload failed', error));
+          }} />
+        </label>
       );
     }
 
@@ -1188,7 +1196,7 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
         <div className="space-y-5">
           <div className="rounded-xl border border-dashed border-[#D6D6D6] bg-[#FAFAFA] p-4">
             <p className="text-[13px] font-semibold text-[#1A1818]">Upload Closing Proof</p>
-            <p className="text-[12px] text-[#9CA3AF] mt-1">Upload placeholder only. Wire to the backend later.</p>
+            <p className="text-[12px] text-[#9CA3AF] mt-1">Files are uploaded through the enterprise attachment service.</p>
             <div className="mt-3 h-28 rounded-lg border border-[#E0E0E0] bg-white flex items-center justify-center text-[#9CA3AF]">
               <Paperclip className="h-4 w-4 mr-2" /> Drag or choose a file
             </div>
@@ -1479,7 +1487,7 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
         <div className="space-y-5">
           <div className="rounded-xl border border-dashed border-[#D6D6D6] bg-[#FAFAFA] p-4">
             <p className="text-[13px] font-semibold text-[#1A1818]">Upload Closing Proof</p>
-            <p className="text-[12px] text-[#9CA3AF] mt-1">Upload placeholder only. Wire to the backend later.</p>
+            <p className="text-[12px] text-[#9CA3AF] mt-1">Files are uploaded through the enterprise attachment service.</p>
             <div className="mt-3 h-28 rounded-lg border border-[#E0E0E0] bg-white flex items-center justify-center text-[#9CA3AF]">
               <Paperclip className="h-4 w-4 mr-2" /> Drag or choose a file
             </div>

@@ -36,7 +36,7 @@ export const useDashboardMetrics = (data: DashboardRawData) => {
       training = [], 
       inspections = [], 
       audits = [],
-      totalOrgManhours = 500000 // Temporary mock
+      totalOrgManhours = 0
     } = data;
 
     // --- Leading Indicators ---

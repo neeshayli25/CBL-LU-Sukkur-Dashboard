@@ -14,12 +14,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setTheme] = useState<Theme>('light');
 
   useEffect(() => {
-    // Check local storage or system preference on mount
-    const storedTheme = localStorage.getItem('lu-theme') as Theme;
-    if (storedTheme) {
-      setTheme(storedTheme);
-      if (storedTheme === 'dark') document.documentElement.classList.add('dark');
-    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
       setTheme('dark');
       document.documentElement.classList.add('dark');
     }
@@ -28,8 +23,6 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const toggleTheme = () => {
     setTheme(prev => {
       const newTheme = prev === 'light' ? 'dark' : 'light';
-      localStorage.setItem('lu-theme', newTheme);
-      
       if (newTheme === 'dark') {
         document.documentElement.classList.add('dark');
       } else {

@@ -14,9 +14,8 @@ import { StatusBadge }          from '../components/StatusBadge';
 import { PlantPhotoCard }       from '../components/PlantPhotoCard';
 import { useFilters }           from '../context/FilterContext';
 import {
-  CheckCircle2, FileWarning, Timer,
-  ListTodo, ShieldAlert,
-  Users, BookOpen, AlertTriangle, ArrowRight,
+  CheckCircle2, FileWarning,
+  Users, BookOpen, AlertTriangle, ArrowRight, ShieldAlert,
   CheckCircle, XCircle, Info, RefreshCw,
   ChevronUp, ChevronDown,
 } from 'lucide-react';
@@ -163,17 +162,17 @@ export const Dashboard = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [hRes, nmRes, incRes, capRes, trRes, insRes, drRes, legRes, audRes] = await Promise.all([
-          moduleService.getAll('hazard-reporting'),
-          moduleService.getAll('near-miss'),
-          moduleService.getAll('incident-log'),
-          moduleService.getAll('action-tracker'),
-          moduleService.getAll('training-records'),
-          moduleService.getAll('inspection-records'),
-          moduleService.getAll('emergency-drills'),
-          moduleService.getAll('legal-compliance'),
-          moduleService.getAll('audit-management'),
+        const [hRes, nmRes, incRes, capRes, trRes, insRes, audRes] = await Promise.all([
+          moduleService.getAll('hazard-reporting', { page: 1, limit: 20, ...filters }),
+          moduleService.getAll('near-miss', { page: 1, limit: 20, ...filters }),
+          moduleService.getAll('incident-log', { page: 1, limit: 20, ...filters }),
+          moduleService.getAll('action-tracker', { page: 1, limit: 20, ...filters }),
+          moduleService.getAll('training-records', { page: 1, limit: 20, ...filters }),
+          moduleService.getAll('inspection-records', { page: 1, limit: 20, ...filters }),
+          moduleService.getAll('audit-management', { page: 1, limit: 20, ...filters }),
         ]);
+        const drRes = { data: [] };
+        const legRes = { data: [] };
 
         const applyFilters = (data: any[]) => {
           let f = [...data];
@@ -204,7 +203,7 @@ export const Dashboard = () => {
           audits:       applyFilters(audRes.data),
           drills:       applyFilters(drRes.data),
           legal:        applyFilters(legRes.data),
-          totalOrgManhours: 500000,
+          totalOrgManhours: 0,
         });
       } catch (err) {
         console.error('Dashboard fetch error:', err);

@@ -12,26 +12,32 @@ export interface Plant {
 
 export const plantService = {
   getAll: async (params?: any) => {
-    return apiClient.get('/plants', { params });
+    const response = await apiClient.get('/plants', { params });
+    return response.data;
   },
 
   getActive: async () => {
-    return apiClient.get('/plants/active');
+    const response = await apiClient.get('/plants/active');
+    return response.data;
   },
 
   getById: async (id: string) => {
-    return apiClient.get(`/plants/${id}`);
+    const response = await apiClient.get(`/plants/${id}`);
+    return response.data;
   },
 
   create: async (data: Partial<Plant>) => {
-    return apiClient.post('/plants', data);
+    const response = await apiClient.post('/plants', data);
+    return response.data;
   },
 
   update: async (id: string, data: Partial<Plant>) => {
-    return apiClient.put(`/plants/${id}`, data);
+    const response = await apiClient.put(`/plants/${id}`, data);
+    return response.data;
   },
 
   delete: async (id: string) => {
-    return apiClient.delete(`/plants/${id}`);
+    const response = await apiClient.delete(`/plants/${id}`);
+    return response.data;
   }
 };

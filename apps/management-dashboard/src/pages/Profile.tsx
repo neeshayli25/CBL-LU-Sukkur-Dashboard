@@ -56,40 +56,6 @@ export const Profile = () => {
               </div>
             </div>
 
-            <div className="mt-10 space-y-6">
-              <h2 className="text-lg font-semibold border-b border-border pb-2">Recent Activity</h2>
-              <div className="space-y-0">
-                <div className="flex gap-4">
-                   <div className="flex flex-col items-center">
-                     <div className="h-3 w-3 rounded-full bg-primary mt-1.5" />
-                     <div className="w-px h-full bg-border mt-2" />
-                   </div>
-                   <div className="pb-6">
-                     <p className="text-sm font-medium text-foreground">Logged a new High-Priority Hazard Report</p>
-                     <p className="text-xs text-muted-foreground mt-1">2 hours ago</p>
-                   </div>
-                </div>
-                <div className="flex gap-4">
-                   <div className="flex flex-col items-center">
-                     <div className="h-3 w-3 rounded-full bg-secondary mt-1.5" />
-                     <div className="w-px h-full bg-border mt-2" />
-                   </div>
-                   <div className="pb-6">
-                     <p className="text-sm font-medium text-foreground">Updated CAPA #14 Status to Closed</p>
-                     <p className="text-xs text-muted-foreground mt-1">Yesterday</p>
-                   </div>
-                </div>
-                <div className="flex gap-4">
-                   <div className="flex flex-col items-center">
-                     <div className="h-3 w-3 rounded-full bg-muted-foreground mt-1.5" />
-                   </div>
-                   <div>
-                     <p className="text-sm font-medium text-foreground">Exported Annual HSE Summary Report</p>
-                     <p className="text-xs text-muted-foreground mt-1">3 days ago</p>
-                   </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>

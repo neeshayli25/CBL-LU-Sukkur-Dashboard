@@ -1,7 +1,7 @@
 import { useAuthStore } from "../store/authStore";
 
 export const usePermissions = () => {
-  const { user, hasRole } = useAuthStore();
+  const { user, hasRole, hasPermission } = useAuthStore();
 
   // Roles exactly as defined by the user
   const isSysAdmin = hasRole("System Administrator");
@@ -11,31 +11,28 @@ export const usePermissions = () => {
   const isDataEntry = hasRole("Data Entry Operator");
   const isViewer = hasRole("Viewer") || hasRole("Read Only");
 
-  // If no role matched, fallback to Viewer permissions to be safe
-  const hasNoRole = !isSysAdmin && !isHseManager && !isHseOfficer && !isDeptManager && !isDataEntry && !isViewer;
+  const permissionOrRole = (permission: string, roleAccess: boolean) => hasPermission(permission) || roleAccess;
 
-  const canAddData = () => {
-    return isSysAdmin || isHseManager || isHseOfficer || isDataEntry;
-  };
+  const canAddData = () => permissionOrRole('hazards.create', isSysAdmin || isHseManager || isHseOfficer || isDataEntry);
 
   const canEditData = () => {
-    return isSysAdmin || isHseManager || isHseOfficer;
+    return permissionOrRole('hazards.update', isSysAdmin || isHseManager || isHseOfficer);
   };
 
   const canDeleteData = () => {
-    return isSysAdmin || isHseManager || isHseOfficer;
+    return permissionOrRole('hazards.delete', isSysAdmin || isHseManager || isHseOfficer);
   };
 
   const canExportCSV = () => {
-    return isSysAdmin || isHseManager || isHseOfficer || isDeptManager;
+    return permissionOrRole('reports.export', isSysAdmin || isHseManager || isHseOfficer || isDeptManager);
   };
 
   const canViewReports = () => {
-    return isSysAdmin || isHseManager || isHseOfficer || isDeptManager || isViewer || hasNoRole;
+    return permissionOrRole('dashboard.view', isSysAdmin || isHseManager || isHseOfficer || isDeptManager || isViewer);
   };
 
   const canApproveRecords = () => {
-    return isSysAdmin || isHseManager;
+    return permissionOrRole('records.approve', isSysAdmin || isHseManager);
   };
 
   const isDepartmentRestricted = () => {

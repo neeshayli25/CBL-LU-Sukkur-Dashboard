@@ -1,14 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { usePermissions }  from '@cbl/auth';
 import { Layout }          from '../components/Layout';
 import { ContextHeader }   from '../components/ContextHeader';
 import { StatusBadge }     from '../components/StatusBadge';
 import {
-  Download, Printer, Table as TableIcon, RefreshCw, Star, Clock, Bookmark, ChevronRight
+  Download, Printer, Table as TableIcon, RefreshCw, ChevronRight
 } from 'lucide-react';
 import { DEPARTMENTS, STATUSES, RISK_RATINGS, INCIDENT_CATEGORIES } from '../config/constants';
 import { moduleService }   from '../services/api/moduleService';
 import { ALL_SECTIONS }    from '../config/sectionSchemas';
+import { reportClient } from '@cbl/api';
 
 // ============================================================
 // Reports — Enterprise Reporting Center
@@ -21,13 +22,6 @@ const REPORT_TYPES = [
   { id: 'near-miss',          label: 'Near Miss',           icon: '🎯' },
   { id: 'training-records',   label: 'Training Records',    icon: '👥' },
   { id: 'action-tracker',     label: 'Actions / CAPA',      icon: '✅' },
-];
-
-const SAVED_TEMPLATES = [
-  { id: 1, name: 'Monthly Incident Summary', type: 'incident-log', icon: Bookmark },
-  { id: 2, name: 'High Risk Hazards', type: 'hazard-reporting', icon: Star },
-  { id: 3, name: 'Overdue CAPAs', type: 'action-tracker', icon: Clock },
-  { id: 4, name: 'Near Miss - Q3', type: 'near-miss', icon: Bookmark },
 ];
 
 const inputClass =
@@ -54,6 +48,14 @@ export const Reports = () => {
   const [previewData,   setPreviewData]   = useState<any[]>([]);
   const [previewSchema, setPreviewSchema] = useState<any>(null);
   const [hasGenerated,  setHasGenerated]  = useState(false);
+  const [savedTemplates, setSavedTemplates] = useState<any[]>([]);
+
+  useEffect(() => {
+    reportClient.list({ page: 1, limit: 20 }).then((response) => {
+      const payload = response.data?.data ?? response.data;
+      setSavedTemplates(Array.isArray(payload) ? payload : payload?.rows || []);
+    }).catch((error) => console.error('Saved reports load failed', error));
+  }, []);
 
   const currentSchema = ALL_SECTIONS.find(s => s.id === currentReportId);
   const showRiskFilter     = ['incident-log', 'hazard-reporting'].includes(currentReportId);
@@ -62,7 +64,15 @@ export const Reports = () => {
 
   const fetchAndFilterData = async () => {
     try {
-      const res = await moduleService.getAll(currentReportId);
+      const res = await moduleService.getAll(currentReportId, {
+        page: 1,
+        limit: 20,
+        department: department !== 'All' ? department : undefined,
+        status: status !== 'All' ? status : undefined,
+        risk: riskRating !== 'All' ? riskRating : undefined,
+        fromDate: fromDate || undefined,
+        toDate: toDate || undefined,
+      });
       let data: any[] = res.data || [];
       if (department !== 'All') data = data.filter(d => d.department_id === department);
       if (status !== 'All' && showStatusFilter)   data = data.filter(d => d.status_id === status);
@@ -95,26 +105,9 @@ export const Reports = () => {
   };
 
   const handleExportCSV = async () => {
-    const data = await fetchAndFilterData();
-    if (data.length === 0) { alert('No records found for the selected filters.'); return; }
-    if (!currentSchema) return;
-    const headers = currentSchema.columns.map((col: any) => col.label);
-    const rows    = data.map((entry: any) =>
-      currentSchema.columns.map((col: any) => {
-        let v = String(entry[col.key] ?? '').replace(/"/g, '""');
-        if (v.search(/(",|\n)/g) >= 0) v = `"${v}"`;
-        return v;
-      }).join(',')
-    );
-    const csv  = [headers.join(','), ...rows].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url  = URL.createObjectURL(blob);
-    const a    = Object.assign(document.createElement('a'), {
-      href: url,
-      download: `${currentReportId}_${new Date().toISOString().split('T')[0]}.csv`,
-      style: { visibility: 'hidden' },
-    });
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    const response = await reportClient.exportPerformance({ exportType: 'CSV', filters: { department, status, riskRating, incidentCategory, fromDate, toDate } });
+    const filePath = response.data?.data?.filePath || response.data?.filePath;
+    if (filePath) window.open(filePath, '_blank', 'noopener,noreferrer');
   };
 
   const handlePrint = () => window.print();
@@ -150,7 +143,7 @@ export const Reports = () => {
             <p className="text-[11px] text-[#9CA3AF] mt-0.5">Quickly run common reports</p>
           </div>
           <div className="p-2 space-y-1">
-            {SAVED_TEMPLATES.map(t => {
+            {savedTemplates.map(t => {
               const isActive = activeTemplate === t.id;
               return (
                 <button

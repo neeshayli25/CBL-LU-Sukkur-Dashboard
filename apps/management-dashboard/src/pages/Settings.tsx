@@ -2,17 +2,16 @@ import { useState } from 'react';
 import { Layout } from '../components/Layout';
 import { useAuth, useAuthStore } from '@cbl/auth';
 import { useTheme } from '../context/ThemeContext';
-import { Settings as SettingsIcon, User, Bell, Moon, Sun, MonitorSmartphone, ShieldAlert, Database } from 'lucide-react';
-import { DEPARTMENTS } from '../config/constants';
+import { Settings as SettingsIcon, User, Bell, Moon, Sun, MonitorSmartphone, Database } from 'lucide-react';
 import { plantService, type Plant } from '../services/api/plantService';
 import { useEffect } from 'react';
+import { DEPARTMENTS } from '../config/constants';
 
 export const Settings = () => {
   const { user } = useAuth();
   const { hasRole } = useAuthStore();
   const { theme, toggleTheme } = useTheme();
   
-  // Mock settings state
   const [emailAlerts, setEmailAlerts] = useState(true);
   const [overdueAlerts, setOverdueAlerts] = useState(true);
   const [density, setDensity] = useState('comfortable');
@@ -74,54 +73,6 @@ export const Settings = () => {
                   {user?.role || 'None'}
                 </span>
               </div>
-            </div>
-          </div>
-        </section>
-
-        {/* DEVELOPER CONTROLS (DEV ONLY) */}
-        <section className="bg-danger/5 border border-danger/20 rounded-lg p-6 card-shadow">
-          <h2 className="text-lg font-semibold text-danger mb-4 flex items-center gap-2">
-            <ShieldAlert className="h-5 w-5" /> Developer Controls (Test RBAC)
-          </h2>
-          <p className="text-sm text-muted-foreground mb-4">
-            Use these controls to instantly switch your mock role and department to test how the UI reacts for different user types.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Simulate Role</label>
-              <select 
-                value={user?.role || ''}
-                onChange={(e) => {
-                  if (user) {
-                    useAuthStore.getState().loginUser({ ...user, role: e.target.value }, "dev-token");
-                  }
-                }}
-                className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-foreground focus:ring-1 focus:ring-danger outline-none"
-              >
-                <option value="System Administrator">System Administrator</option>
-                <option value="HSE Manager">HSE Manager</option>
-                <option value="HSE Officer">HSE Officer</option>
-                <option value="Department Manager">Department Manager</option>
-                <option value="Data Entry Operator">Data Entry Operator</option>
-                <option value="Viewer">Viewer (Read Only)</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Simulate Department</label>
-              <select 
-                value={user?.department_id || ''}
-                onChange={(e) => {
-                  if (user) {
-                    useAuthStore.getState().loginUser({ ...user, department_id: e.target.value }, "dev-token");
-                  }
-                }}
-                className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-foreground focus:ring-1 focus:ring-danger outline-none"
-              >
-                <option value="">None (Global Access)</option>
-                {DEPARTMENTS.map(dept => (
-                  <option key={dept} value={dept}>{dept}</option>
-                ))}
-              </select>
             </div>
           </div>
         </section>

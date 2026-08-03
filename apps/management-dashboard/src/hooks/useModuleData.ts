@@ -6,13 +6,13 @@ export const useModuleData = (schemaId: string) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchAll = useCallback(async () => {
+  const fetchAll = useCallback(async (params?: Record<string, unknown>) => {
     if (!schemaId) return;
     setLoading(true);
     try {
-      const response = await moduleService.getAll(schemaId);
+      const response = await moduleService.getAll(schemaId, { page: 1, limit: 20, ...params });
       if (response.success) {
-        setData(response.data);
+        setData(Array.isArray(response.data) ? response.data : []);
         setError(null);
       } else {
         setError(response.message);
@@ -41,7 +41,7 @@ export const useModuleData = (schemaId: string) => {
     try {
       const response = await moduleService.update(schemaId, id, updates);
       if (response.success) {
-        setData(prev => prev.map(item => item.id === id ? response.data : item));
+        setData(prev => prev.map(item => recordId(item) === id ? response.data : item));
         return { success: true };
       }
       return { success: false, message: response.message };
@@ -54,7 +54,7 @@ export const useModuleData = (schemaId: string) => {
     try {
       const response = await moduleService.delete(schemaId, id);
       if (response.success) {
-        setData(prev => prev.filter(item => item.id !== id));
+        setData(prev => prev.filter(item => recordId(item) !== id));
         return { success: true };
       }
       return { success: false, message: response.message };
@@ -73,3 +73,9 @@ export const useModuleData = (schemaId: string) => {
     deleteRecord
   };
 };
+
+const recordId = (record: any) => String(
+  record?.id ?? record?.hazard_id ?? record?.near_miss_id ?? record?.incident_id ??
+  record?.corrective_action_id ?? record?.training_session_id ?? record?.audit_id ??
+  record?.inspection_id ?? ''
+);
