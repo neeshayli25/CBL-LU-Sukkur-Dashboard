@@ -54,6 +54,7 @@ const AuditLog = sequelize.define('AuditLog', {
 }, {
   tableName: 'audit_logs',
   updatedAt: false, // Audit logs are immutable
+  paranoid: false,
   indexes: [
     { fields: ['user_id'] },
     { fields: ['action'] },

@@ -7,6 +7,11 @@ const { PERMISSIONS } = require('../../shared/constants/permissions');
 module.exports = {
   async up(queryInterface) {
     const now = new Date();
+    const [existing] = await queryInterface.sequelize.query(
+      'SELECT id FROM permissions LIMIT 1',
+    );
+    if (existing && existing.length > 0) return;
+
     const permissionRows = Object.entries(PERMISSIONS).map(([, key]) => {
       const [group, action] = key.split(':');
       return {

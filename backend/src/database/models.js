@@ -38,21 +38,23 @@ const Attachment = require('../modules/actions/attachment.model');
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // User ↔ Role
-User.belongsTo(Role, { foreignKey: 'role_id', as: 'role' });
-Role.hasMany(User, { foreignKey: 'role_id', as: 'users' });
+User.belongsTo(Role, { foreignKey: 'roleId', as: 'role' });
+Role.hasMany(User, { foreignKey: 'roleId', as: 'users' });
 
 // Role ↔ Permission (many-to-many)
 Role.belongsToMany(Permission, {
   through: 'role_permissions',
-  foreignKey: 'roleId',
-  otherKey: 'permissionId',
+  foreignKey: 'role_id',
+  otherKey: 'permission_id',
   as: 'permissions',
+  timestamps: true,
 });
 Permission.belongsToMany(Role, {
   through: 'role_permissions',
-  foreignKey: 'permissionId',
-  otherKey: 'roleId',
+  foreignKey: 'permission_id',
+  otherKey: 'role_id',
   as: 'roles',
+  timestamps: true,
 });
 
 // User → Tokens

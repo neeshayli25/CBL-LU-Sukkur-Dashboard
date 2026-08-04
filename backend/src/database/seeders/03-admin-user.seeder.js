@@ -17,6 +17,11 @@ module.exports = {
     const superAdminRoleId = roles[0]?.id;
     if (!superAdminRoleId) throw new Error('Super admin role not found. Run roles seeder first.');
 
+    const [existingUser] = await queryInterface.sequelize.query(
+      `SELECT id FROM users WHERE email = 'superadmin@cblapp.com' LIMIT 1`,
+    );
+    if (existingUser && existingUser.length > 0) return;
+
     const hashedPassword = await bcrypt.hash('Admin@123!', 12);
 
     await queryInterface.bulkInsert('users', [

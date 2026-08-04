@@ -3,23 +3,39 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../../database/connection');
 
-const Role = sequelize.define('Role', {
-  id: {
-    type: DataTypes.INTEGER,
-    autoIncrement: true,
-    primaryKey: true,
+const Role = sequelize.define(
+  'Role',
+  {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+      allowNull: false,
+    },
+    name: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+      unique: true,
+    },
+    displayName: {
+      type: DataTypes.STRING(150),
+      allowNull: false,
+    },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    isSystem: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
   },
-  name: {
-    type: DataTypes.STRING(50),
-    allowNull: false,
-    unique: true,
+  {
+    tableName: 'roles',
+    timestamps: true,
+    paranoid: true,
   },
-}, {
-  tableName: 'roles',
-  timestamps: true,
-  createdAt: 'created_at',
-  updatedAt: 'updated_at',
-  paranoid: false,
-});
+);
 
 module.exports = Role;
