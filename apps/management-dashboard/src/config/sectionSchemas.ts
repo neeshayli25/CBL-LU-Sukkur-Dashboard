@@ -4,7 +4,8 @@ import {
   HAZARD_CATEGORIES,
   ROOT_CAUSES,
   RISK_RATINGS,
-  STATUSES
+  STATUSES,
+  CONTRACTORS
 } from './constants';
 
 export interface ColumnSchema {
@@ -63,7 +64,7 @@ export const hazardReportingSchema: SectionConfig = {
     { key: 'target_date', label: 'Target Date', type: 'date', section: 'Assignment' },
     { key: 'risk_rating_id', label: 'Risk Rating', type: 'select', options: RISK_RATINGS, required: true, section: 'Assignment' },
     { key: 'contractor_name', label: 'Contractor Name', type: 'text', section: 'Assignment' },
-    { key: 'contractor_company', label: 'Contractor Company', type: 'text', section: 'Assignment' },
+    { key: 'contractor_company', label: 'Contractor Company', type: 'select', options: CONTRACTORS, section: 'Assignment' },
     { key: 'status_id', label: 'Status', type: 'select', options: STATUSES, required: true, section: 'Assignment' },
     { key: 'initial_photo', label: 'Initial Photo', type: 'file', section: 'Attachments' },
     { key: 'additional_photos', label: 'Additional Photos', type: 'file', section: 'Attachments' },
@@ -98,18 +99,15 @@ export const nearMissSchema: SectionConfig = {
     { key: 'designation', label: 'Designation', type: 'text', required: true, section: 'Basic Information' },
     { key: 'affected_person', label: 'Affected Person Name', type: 'text', section: 'Basic Information' },
     { key: 'affected_designation', label: 'Affected Person Designation', type: 'text', section: 'Basic Information' },
-    { key: 'time', label: 'Date & Time', type: 'datetime', required: true, section: 'Basic Information' },
+    { key: 'time', label: 'Time (24 Hrs)', type: 'time', required: true, section: 'Basic Information' },
     { key: 'location', label: 'Area / Location', type: 'text', required: true, section: 'Basic Information' },
     { key: 'details', label: 'Details of the Near Miss', type: 'textarea', required: true, section: 'Near Miss Details' },
     { key: 'preventive_action', label: 'Preventive Action Suggestion', type: 'textarea', section: 'Corrective Actions' },
-    { key: 'responsible_person', label: 'Responsible Person', type: 'text', section: 'Corrective Actions' },
-    { key: 'investigation_required', label: 'Further Investigation Required', type: 'select', options: ['Yes', 'No'], section: 'Investigation' },
-    { key: 'root_cause_analysis', label: 'Root Cause Analysis', type: 'textarea', section: 'Investigation' },
-    { key: 'investigation_notes', label: 'Investigation Notes', type: 'textarea', section: 'Investigation' },
-    { key: 'investigation_officer', label: 'Investigation Officer', type: 'text', section: 'Investigation' },
-    { key: 'reported_in_hazard', label: 'Reported in Hazard', type: 'select', options: ['Yes', 'No'], section: 'Investigation' },
-    { key: 'status_id', label: 'Status', type: 'select', options: STATUSES, required: true, section: 'Assignment' },
-    { key: 'remarks', label: 'Remarks', type: 'textarea', section: 'Assignment' }
+    { key: 'responsible_person', label: 'Resp.', type: 'text', section: 'Corrective Actions' },
+    { key: 'investigation_required', label: 'Further Investigation Required (Y/N)', type: 'select', options: ['Yes', 'No'], section: 'Investigation' },
+    { key: 'reported_in_hazard', label: 'Reported in HAZARD (Y/N)', type: 'select', options: ['Yes', 'No'], section: 'Investigation' },
+    { key: 'status', label: 'Status (Open/Close)', type: 'select', options: ['Open', 'Closed'], section: 'Investigation' },
+    { key: 'remarks', label: 'Remarks', type: 'textarea', section: 'Investigation' },
   ]
 };
 
@@ -150,13 +148,19 @@ export const actionTrackerSchema: SectionConfig = {
   accentColor: '#A73A28',
   icon: 'CheckSquare',
   columns: [
-    { key: 'linked_id', label: 'Linked ID (Incident/Hazard)', type: 'text', required: true, section: 'Action Card' },
-    { key: 'action', label: 'Action', type: 'textarea', required: true, section: 'Action Card' },
-    { key: 'assigned_to', label: 'Responsible Person', type: 'text', required: true, section: 'Action Card' },
-    { key: 'due_date', label: 'Due Date', type: 'date', required: true, section: 'Action Card' },
-    { key: 'completion_date', label: 'Completion Date', type: 'date', section: 'Action Card' },
-    { key: 'status_id', label: 'Status', type: 'select', options: STATUSES, required: true, section: 'Action Card' },
-    { key: 'remarks', label: 'Remarks', type: 'textarea', section: 'Action Card' }
+    { key: 's_no', label: 'Sr. #', type: 'text', hideFromForm: true, compute: d => d.s_no || '' },
+    { key: 'date', label: 'Date', type: 'date', required: true, section: 'Action Information' },
+    { key: 'month', label: 'Month', type: 'text', readonly: true, compute: d => d.date ? new Date(d.date).toLocaleString('default', { month: 'short', year: 'numeric' }) : '', section: 'Action Information' },
+    { key: 'auditor_name', label: 'Auditor Name', type: 'text', required: true, section: 'Action Information' },
+    { key: 'action_driven_from', label: 'Action Driven From', type: 'text', required: true, section: 'Action Information' },
+    { key: 'audit_description', label: 'Audit Description', type: 'text', required: true, section: 'Action Information' },
+    { key: 'area_clauses', label: 'Area/Clauses', type: 'text', required: true, section: 'Action Details' },
+    { key: 'actions_recommendation', label: 'Actions / Recommendation', type: 'textarea', required: true, section: 'Action Details' },
+    { key: 'severity', label: 'Severity', type: 'select', options: ['Low', 'Medium', 'High'], required: true, section: 'Action Details' },
+    { key: 'department_id', label: 'Responsible Department', type: 'select', options: DEPARTMENTS, required: true, section: 'Assignment' },
+    { key: 'responsible_manager', label: 'Responsible Manager', type: 'text', required: true, section: 'Assignment' },
+    { key: 'target_date', label: 'Target Date', type: 'date', required: true, section: 'Assignment' },
+    { key: 'status_id', label: 'Action Item Status', type: 'select', options: STATUSES, required: true, section: 'Assignment' }
   ]
 };
 
@@ -215,12 +219,22 @@ export const auditManagementSchema: SectionConfig = {
   accentColor: '#8B5CF6',
   icon: 'ClipboardList',
   columns: [
-    { key: 'title', label: 'Audit Title', type: 'text', required: true, section: 'Audit' },
-    { key: 'department_id', label: 'Department', type: 'select', options: DEPARTMENTS, section: 'Audit' },
-    { key: 'auditor', label: 'Auditor', type: 'text', required: true, section: 'Audit' },
-    { key: 'audit_date', label: 'Audit Date', type: 'date', required: true, section: 'Audit' },
-    { key: 'findings', label: 'Findings / Notes', type: 'textarea', section: 'Audit' },
-    { key: 'remarks', label: 'Remarks', type: 'textarea', section: 'Audit' }
+    { key: 'conducted_by', label: 'Audit Conducted by', type: 'text', required: true, section: 'Audit Header' },
+    { key: 'person_interviewed', label: 'Person Interviewed', type: 'text', required: true, section: 'Audit Header' },
+    { key: 'audit_date', label: 'Date of Audit', type: 'date', required: true, section: 'Audit Header' },
+    { key: 's_no', label: 'Sr. #', type: 'text', hideFromForm: true, compute: d => d.s_no || '' },
+    { key: 'standard_reference', label: 'Standard Reference', type: 'text', required: true, section: 'Audit Findings' },
+    { key: 'audit_point', label: 'Audit Point', type: 'text', required: true, section: 'Audit Findings' },
+    { key: 'standard_limit', label: 'Standard Limit/Requirement', type: 'text', required: true, section: 'Audit Findings' },
+    { key: 'scoring', label: 'Scoring (1-4)', type: 'select', options: ['1', '2', '3', '4'], required: true, section: 'Audit Findings' },
+    { key: 'actions_recommendations', label: 'Actions / Recommendations', type: 'textarea', required: true, section: 'Corrective Actions' },
+    { key: 'target_date', label: 'Target Date for Completion', type: 'date', required: true, section: 'Corrective Actions' },
+    { key: 'responsibility', label: 'Responsibility', type: 'text', required: true, section: 'Corrective Actions' },
+    { key: 'department_id', label: 'Responsible Department', type: 'select', options: DEPARTMENTS, required: true, section: 'Corrective Actions' },
+    { key: 'status_id', label: 'Closure Status', type: 'select', options: ['Open', 'Closed'], required: true, section: 'Corrective Actions' },
+    { key: 'points_scored', label: 'Points Scored', type: 'number', readonly: true, compute: d => parseFloat(d.scoring) || 0, section: 'Summary' },
+    { key: 'points_available', label: 'Points Available', type: 'number', readonly: true, compute: () => 4, section: 'Summary' },
+    { key: 'compliance_percentage', label: 'Overall %Compliance', type: 'number', readonly: true, compute: d => ((parseFloat(d.scoring) || 0) / 4) * 100, section: 'Summary' }
   ]
 };
 
@@ -231,10 +245,47 @@ export const inspectionRecordsSchema: SectionConfig = {
   accentColor: '#F59E0B',
   icon: 'CheckSquare',
   columns: [
-    { key: 'department_id', label: 'Department', type: 'select', options: DEPARTMENTS, section: 'Inspection' },
-    { key: 'inspector', label: 'Inspector', type: 'text', required: true, section: 'Inspection' },
-    { key: 'inspection_date', label: 'Inspection Date', type: 'date', required: true, section: 'Inspection' },
-    { key: 'observations', label: 'Observations', type: 'textarea', section: 'Inspection' }
+    { key: 's_no', label: 'Sr. #', type: 'text', hideFromForm: true, compute: d => d.s_no || '' },
+    { key: 'standard_reference', label: 'Standard Reference', type: 'text', required: true, section: 'Inspection Point' },
+    { key: 'audit_point', label: 'Audit Point', type: 'text', required: true, section: 'Inspection Point' },
+    { key: 'standard_limit', label: 'Standard Limit/Requirement', type: 'text', required: true, section: 'Inspection Point' },
+    { key: 'actions_recommendations', label: 'Actions / Recommendations', type: 'textarea', required: true, section: 'Findings' },
+    { key: 'severity', label: 'Severity', type: 'select', options: ['Low', 'Medium', 'High'], required: true, section: 'Findings' },
+    { key: 'target_date', label: 'Target Date for Completion', type: 'date', required: true, section: 'Findings' },
+    { key: 'responsibility', label: 'Responsibility', type: 'text', required: true, section: 'Action Assignment' },
+    { key: 'department_id', label: 'Responsible Department', type: 'select', options: DEPARTMENTS, required: true, section: 'Action Assignment' },
+    { key: 'status_id', label: 'Closure Status', type: 'select', options: ['Open', 'Closed'], required: true, section: 'Action Assignment' },
+    { key: 'pictorial', label: 'Pictorial', type: 'file', section: 'Action Assignment' }
+  ]
+};
+
+export const criticalAuditPlanSchema: SectionConfig = {
+  id: 'critical-audit-plan',
+  title: 'Critical Audit Plan',
+  path: '/critical-audit-plan',
+  accentColor: '#10B981',
+  icon: 'Calendar',
+  columns: [
+    { key: 's_no', label: 'S.No', type: 'text', hideFromForm: true, compute: d => d.s_no || '' },
+    { key: 'area_name', label: 'Area Name', type: 'text', required: true, section: 'Audit Area' },
+    { key: 'area_owners', label: 'Area Owners', type: 'text', required: true, section: 'Audit Area' },
+    { key: 'audit_objective', label: 'Audit Objective (Aligned with HSE Standards)', type: 'textarea', required: true, section: 'Audit Area' },
+    { key: 'risk_rating', label: 'Risk Rating', type: 'select', options: ['Low', 'Medium', 'High'], required: true, section: 'Planning' },
+    { key: 'auditors', label: 'Auditors', type: 'text', required: true, section: 'Planning' },
+    { key: 'frequency', label: 'Frequency', type: 'select', options: ['Monthly', 'Annually', 'Bi-Annually', 'Quarterly', 'Half Yearly'], required: true, section: 'Planning' },
+    { key: 'jan', label: 'January', type: 'text', section: 'Schedule' },
+    { key: 'feb', label: 'February', type: 'text', section: 'Schedule' },
+    { key: 'mar', label: 'March', type: 'text', section: 'Schedule' },
+    { key: 'apr', label: 'April', type: 'text', section: 'Schedule' },
+    { key: 'may', label: 'May', type: 'text', section: 'Schedule' },
+    { key: 'jun', label: 'June', type: 'text', section: 'Schedule' },
+    { key: 'jul', label: 'July', type: 'text', section: 'Schedule' },
+    { key: 'aug', label: 'August', type: 'text', section: 'Schedule' },
+    { key: 'sep', label: 'September', type: 'text', section: 'Schedule' },
+    { key: 'oct', label: 'October', type: 'text', section: 'Schedule' },
+    { key: 'nov', label: 'November', type: 'text', section: 'Schedule' },
+    { key: 'dec', label: 'December', type: 'text', section: 'Schedule' },
+    { key: 'status_id', label: 'Status', type: 'select', options: ['Pending', 'Done', 'WIP'], required: true, section: 'Schedule' }
   ]
 };
 
@@ -245,5 +296,6 @@ export const ALL_SECTIONS = [
   trainingRecordsSchema,
   actionTrackerSchema,
   auditManagementSchema,
-  inspectionRecordsSchema
+  inspectionRecordsSchema,
+  criticalAuditPlanSchema
 ];

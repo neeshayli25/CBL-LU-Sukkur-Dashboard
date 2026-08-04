@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth, usePermissions } from '@cbl/auth';
+import { useAuth, usePermissions, useAuthStore } from '@cbl/auth';
 import { useNotifications } from '../hooks/useNotifications';
 import {
   LayoutDashboard, FileText, BarChart3, Settings, LogOut,
@@ -21,50 +21,46 @@ const NAV_GROUPS = [
   {
     label: 'OVERVIEW',
     items: [
-      { title: 'Dashboard',          href: '/dashboard',          Icon: LayoutDashboard },
+      { title: 'Dashboard', href: '/dashboard', Icon: LayoutDashboard },
     ],
   },
   {
     label: 'HSE MONITORING',
     items: [
-      { title: 'Hazard Reporting',   href: '/hazard-reporting',   Icon: AlertTriangle },
-      { title: 'Near Miss',          href: '/near-miss',          Icon: Target },
-      { title: 'Incident Log',       href: '/incident-log',       Icon: FileWarning },
+      { title: 'Hazard Reporting', href: '/hazard-reporting', Icon: AlertTriangle },
+      { title: 'Near Miss', href: '/near-miss', Icon: Target },
+      { title: 'Incident Log', href: '/incident-log', Icon: FileWarning },
     ],
   },
   {
     label: 'COMPLIANCE',
     items: [
-      { title: 'CAPA / Actions',     href: '/action-tracker',     Icon: CheckSquare },
-      { title: 'Audit Management',   href: '/audit-management',   Icon: ClipboardList },
+      { title: 'CAPA / Actions', href: '/action-tracker', Icon: CheckSquare },
+      { title: 'Critical Audit Plan', href: '/critical-audit-plan', Icon: ClipboardList },
+      { title: 'Audit Management', href: '/audit-management', Icon: ClipboardList },
       { title: 'Inspection Records', href: '/inspection-records', Icon: ClipboardList },
     ],
   },
   {
     label: 'TRAINING',
     items: [
-      { title: 'Training Records',   href: '/training-records',   Icon: Users },
+      { title: 'Training Records', href: '/training-records', Icon: Users },
     ],
   },
   {
     label: 'REPORTING',
     items: [
-      { title: 'Reports',            href: '/reports',            Icon: FileText },
-      { title: 'Analytics',          href: '/analytics',          Icon: BarChart3 },
+      { title: 'Reports', href: '/reports', Icon: FileText },
+      { title: 'Analytics', href: '/analytics', Icon: BarChart3 },
     ],
   },
-  {
-    label: 'ADMINISTRATION',
-    items: [
-      { title: 'Settings',           href: '/settings',           Icon: Settings },
-    ],
-  },
+
 ] as const;
 
 const NOTIF_TYPE = {
-  danger:  { dot: '#EF4444', line: '#FEE2E2' },
+  danger: { dot: '#EF4444', line: '#FEE2E2' },
   warning: { dot: '#F59E0B', line: '#FEF9C3' },
-  info:    { dot: '#3B82F6', line: '#DBEAFE' },
+  info: { dot: '#3B82F6', line: '#DBEAFE' },
 };
 
 // Helper: resolve active state robustly
@@ -80,21 +76,32 @@ const getInitials = (name?: string): string => {
 };
 
 export const Layout = ({ children }: { children: React.ReactNode }) => {
-  const [collapsed,         setCollapsed]         = useState(false);
-  const [mobileMenuOpen,    setMobileMenuOpen]     = useState(false);
-  const [showNotifications, setShowNotifications]  = useState(false);
-  const [userMenuOpen,      setUserMenuOpen]       = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
-  const { logout, user }      = useAuth();
-  const { canViewReports }    = usePermissions();
-  const navigate              = useNavigate();
-  const location              = useLocation();
+  const { logout, user } = useAuth();
+  const { hasRole } = useAuthStore();
+  const { canViewReports } = usePermissions();
+
+  const activeNavGroups = [
+    ...NAV_GROUPS,
+    ...(hasRole('System Administrator') ? [{
+      label: 'ADMINISTRATION',
+      items: [
+        { title: 'Master Management', href: '/master-management', Icon: Settings },
+      ]
+    }] : [])
+  ];
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => { logout(); navigate('/login'); };
 
   const sidebarWidth = collapsed ? 48 : 240;
-  const initials     = getInitials(user?.name);
+  const initials = getInitials(user?.name);
 
   // Close all overlays when clicking outside
   const closeOverlays = () => {
@@ -120,17 +127,14 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
         >
           <div className="flex items-center gap-2.5 min-w-0">
             <img
-              src="/logo-dark.svg"
+              src="/logo.svg"
               alt="CBL"
-              className="h-7 w-auto shrink-0 brightness-0 invert"
+              className="h-10 w-auto shrink-0"
             />
             {!collapsed && (
-              <div className="min-w-0 overflow-hidden">
-                <p className="text-white text-[13px] font-bold leading-tight truncate tracking-wide uppercase">
-                  CBL LU SUKKUR
-                </p>
-                <p className="leading-tight truncate font-medium" style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, letterSpacing: '0.08em' }}>
-                  HSE MANAGEMENT
+              <div className="min-w-0">
+                <p className="text-white text-[12px] font-bold leading-[1.2] tracking-wide uppercase whitespace-normal break-words">
+                  HSE Management
                 </p>
               </div>
             )}
@@ -160,7 +164,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
             className="relative flex items-center justify-center w-8 h-8 rounded text-[#6B7280] hover:text-[#2C1810] hover:bg-[#EDE8D8] transition-colors"
             title="Toggle dark mode"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>
           </button>
 
           {/* ---- Notification Bell ---- */}
@@ -181,13 +185,13 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
             {showNotifications && (
               <div className="fixed inset-0 z-[999] flex justify-end">
                 {/* Backdrop */}
-                <div 
-                  className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" 
-                  onClick={() => setShowNotifications(false)} 
+                <div
+                  className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity"
+                  onClick={() => setShowNotifications(false)}
                 />
-                
+
                 {/* Panel */}
-                <div 
+                <div
                   className="relative w-[320px] max-w-[90vw] h-full bg-white flex flex-col shadow-2xl"
                   style={{ animation: 'slideInRight 0.2s ease-out forwards' }}
                 >
@@ -197,14 +201,14 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                     </h3>
                     <div className="flex items-center gap-3">
                       {unreadCount > 0 && (
-                        <button 
+                        <button
                           className="text-[12px] text-[#CB0017] font-medium hover:underline"
                           onClick={markAllAsRead}
                         >
                           Mark all read
                         </button>
                       )}
-                      <button 
+                      <button
                         onClick={() => setShowNotifications(false)}
                         className="w-7 h-7 flex items-center justify-center rounded-md text-[#9CA3AF] hover:text-[#1A1818] hover:bg-[#E5E7EB] transition-colors"
                       >
@@ -212,7 +216,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                       </button>
                     </div>
                   </div>
-                  
+
                   <div className="flex-1 overflow-y-auto">
                     {notifications.length === 0 ? (
                       <div className="py-8 text-center px-4 text-[#9CA3AF] text-[13px]">
@@ -246,14 +250,14 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                       })
                     )}
                   </div>
-                  
+
                   <div className="p-4 border-t border-[#F0F0F0] bg-[#FAFAFA]">
                     <button className="w-full h-9 flex items-center justify-center text-[13px] font-medium text-[#374151] border border-[#E0E0E0] rounded-md hover:bg-[#F5F5F5] transition-colors">
                       View All Notifications
                     </button>
                   </div>
                 </div>
-                
+
                 <style>{`
                   @keyframes slideInRight {
                     from { transform: translateX(100%); }
@@ -359,7 +363,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
         >
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto py-3 hide-scrollbar">
-            {NAV_GROUPS.map((group, gi) => (
+            {activeNavGroups.map((group, gi) => (
               <div key={group.label}>
                 {/* Group label */}
                 {!collapsed && (
@@ -406,11 +410,13 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                       >
                         <item.Icon
                           className="shrink-0"
-                          style={{ width: 16, height: 16,
-                            color: isActive ? '#FFFFFF' : 'rgba(255,255,255,0.65)' }}
+                          style={{
+                            width: 16, height: 16,
+                            color: isActive ? '#FFFFFF' : 'rgba(255,255,255,0.65)'
+                          }}
                         />
                         {!collapsed && (
-                          <span className="truncate leading-none">{item.title}</span>
+                          <span className="truncate leading-snug pb-[1px]">{item.title}</span>
                         )}
                       </NavLink>
                     );
@@ -418,7 +424,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                 </div>
 
                 {/* Subtle divider — not between last group */}
-                {!collapsed && gi < NAV_GROUPS.length - 2 && (
+                {!collapsed && gi < activeNavGroups.length - 2 && (
                   <div className="mx-4 mt-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }} />
                 )}
               </div>
@@ -434,9 +440,8 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                   key={item.href}
                   to={item.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 rounded-md text-[13px] font-medium transition-all duration-150 ${
-                    collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2'
-                  }`}
+                  className={`flex items-center gap-3 rounded-md text-[13px] font-medium transition-all duration-150 ${collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2'
+                    }`}
                   style={{
                     color: isActive ? '#FFFFFF' : 'var(--sidebar-text, rgba(255,255,255,0.85))',
                     backgroundColor: isActive ? 'var(--sidebar-active-bg)' : 'transparent',
@@ -451,7 +456,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                   title={collapsed ? item.title : undefined}
                 >
                   <item.Icon style={{ width: 16, height: 16, color: isActive ? '#FFFFFF' : 'rgba(255,255,255,0.65)', flexShrink: 0 }} />
-                  {!collapsed && <span className="truncate leading-none">{item.title}</span>}
+                  {!collapsed && <span className="truncate leading-snug pb-[1px]">{item.title}</span>}
                 </NavLink>
               );
             })}
@@ -467,7 +472,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
             >
               {collapsed
                 ? <ChevronRight className="h-4 w-4" />
-                : <ChevronLeft  className="h-4 w-4" />
+                : <ChevronLeft className="h-4 w-4" />
               }
             </button>
           </div>

@@ -41,7 +41,7 @@ export const ContextHeader: React.FC<ContextHeaderProps> = ({
   children,
 }) => {
   return (
-    <div className="bg-white border-b border-[#E0E0E0] px-6 py-4 sticky top-12 z-30 print-hide">
+    <div className="bg-white border-b border-[#E0E0E0] px-6 py-4 relative z-30 print-hide">
       {/* Breadcrumb navigation */}
       {breadcrumbs.length > 0 && (
         <nav

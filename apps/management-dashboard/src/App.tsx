@@ -6,6 +6,7 @@ import { Analytics } from './pages/Analytics';
 import { Settings } from './pages/Settings';
 import { Reports } from './pages/Reports';
 import { Profile } from './pages/Profile';
+import { MasterManagement } from './pages/MasterManagement';
 import { DataEntrySection } from './components/DataEntrySection';
 import { ALL_SECTIONS } from './config/sectionSchemas';
 import { FilterProvider } from './context/FilterContext';
@@ -76,6 +77,7 @@ function App() {
           <Route path="/settings" element={<ProtectedRoute fallback={<Navigate to="/login" />}><Settings /></ProtectedRoute>} />
           <Route path="/reports" element={<ProtectedRoute fallback={<Navigate to="/login" />}><Reports /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute fallback={<Navigate to="/login" />}><Profile /></ProtectedRoute>} />
+          <Route path="/master-management" element={<ProtectedRoute fallback={<Navigate to="/login" />}><MasterManagement /></ProtectedRoute>} />
 
           {/* Dynamic Data Entry Sections */}
           {ALL_SECTIONS.map(section => (

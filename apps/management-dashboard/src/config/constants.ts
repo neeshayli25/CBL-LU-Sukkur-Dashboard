@@ -1,15 +1,13 @@
 export const DEPARTMENTS = [
-  'PROD',
-  'QA',
-  'PROJ',
-  'STR',
-  'ADMIN',
-  'IT',
-  'ENG',
+  'ADM',
+  'ESD',
   'HSE',
-  'QC',
-  'NPD',
-  'ESD'
+  'IT',
+  'PRD',
+  'Projects',
+  'QC/FS/NPD',
+  'Stores',
+  'Others'
 ];
 
 export const INCIDENT_CATEGORIES = [
@@ -23,15 +21,52 @@ export const INCIDENT_CATEGORIES = [
 ];
 
 export const HAZARD_CATEGORIES = [
-  'Electrical',
-  'Fire',
-  'Slip/Trip/Fall',
-  'Improper Housekeeping',
-  'Unauthorized Access',
-  'Chemical',
-  'Mechanical',
-  'Behavioral',
-  'Environmental'
+  'Electrical Hazard',
+  'Pinch Point Hazard',
+  'Entanglement Hazard',
+  'Caught-In/Caught-Between Hazard',
+  'Struck-By Hazard',
+  'Slip, Trip & Fall Hazard',
+  'Working at Height Hazard',
+  'Chemical Exposure Hazard',
+  'Fire Hazard',
+  'Explosion Hazard',
+  'Hot Surface / Thermal Hazard',
+  'Confined Space Hazard',
+  'Manual Handling Hazard',
+  'Ergonomic Hazard',
+  'Noise Hazard',
+  'Dust Exposure Hazard',
+  'Moving Vehicle / Traffic Hazard',
+  'Pressure System Hazard',
+  'Stored Energy Hazard (LOTO)',
+  'Biological Hazard',
+  'Sharp Edge Hazard',
+  'Falling Object Hazard',
+  'Material Handling Equipment Hazard',
+  'Poor Housekeeping Hazard',
+  'Compressed Gas Hazard',
+  'Machine Guarding Hazard',
+  'Line of Fire Hazard',
+  'Overhead Load Hazard',
+  'Hot Work Hazard',
+  'Hand Tool Hazard'
+];
+
+export const CONTRACTORS = [
+  'Deecon',
+  'RF Associates',
+  'Wahaj Associates',
+  'AHS Engineering',
+  'Orient',
+  'Mujahid ENG',
+  'Royal ENG',
+  'Sarmad ENG',
+  'Siddiqui ENG',
+  'Noor ENG',
+  'Niazi Riggers',
+  'Haneef ENG',
+  'Other'
 ];
 
 export const ROOT_CAUSES = [
