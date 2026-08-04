@@ -9,8 +9,8 @@
   },
   "dependencies": {
     "@cbl/api": "*",
-    "@azure/msal-browser": "^3.16.0",
-    "@azure/msal-react": "^2.0.17",
+    "@azure/msal-browser": "^5.17.3",
+    "@azure/msal-react": "^5.5.4",
     "zustand": "^4.5.2",
     "jwt-decode": "^4.0.0"
   },
