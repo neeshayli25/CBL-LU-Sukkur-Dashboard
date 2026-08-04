@@ -10,17 +10,23 @@ class UserRepository extends BaseRepository {
 
   /**
    * Find a user by email (with password included for auth checks).
+   * Uses unscoped() so defaultScope password exclusion is lifted, then
+   * applies the withPassword scope for an explicit attribute set.
    */
   async findByEmailWithPassword(email) {
-    return User.scope('withPassword').findOne({ where: { email } });
+    return User.unscoped().scope('withPassword').findOne({ where: { email } });
   }
 
   /**
    * Find a user by ID with their role and permissions eager-loaded.
+   * Also loads the optional employee profile for plant/department scope.
    */
   async findByIdWithRole(id) {
     return User.findByPk(id, {
-      include: [{ model: Role, as: 'role', include: [{ association: 'permissions' }] }],
+      include: [
+        { model: Role, as: 'role', include: [{ association: 'permissions' }] },
+        { association: 'employeeProfile', attributes: ['id', 'departmentId', 'plantId', 'designation'] },
+      ],
     });
   }
 

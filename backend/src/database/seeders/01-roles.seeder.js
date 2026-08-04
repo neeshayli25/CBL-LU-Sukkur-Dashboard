@@ -7,6 +7,11 @@ const { ROLES } = require('../../shared/constants/roles');
 module.exports = {
   async up(queryInterface) {
     const now = new Date();
+    const [existing] = await queryInterface.sequelize.query(
+      `SELECT id FROM roles WHERE name = '${ROLES.SUPER_ADMIN}' LIMIT 1`,
+    );
+    if (existing && existing.length > 0) return;
+
     await queryInterface.bulkInsert('roles', [
       {
         id: uuidv4(),

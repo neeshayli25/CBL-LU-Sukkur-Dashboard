@@ -2,6 +2,9 @@
 
 const ApiError = require('../../shared/utils/ApiError');
 const { MESSAGES } = require('../../shared/constants/messages');
+const { ROLES } = require('../../shared/constants/roles');
+
+const isSuperAdmin = (user) => user?.role?.name === ROLES.SUPER_ADMIN;
 
 /**
  * RBAC Middleware Factory.
@@ -14,6 +17,7 @@ const { MESSAGES } = require('../../shared/constants/messages');
  */
 const requireRoles = (requiredRoles = []) => (req, res, next) => {
   if (!req.user) return next(ApiError.unauthorized());
+  if (isSuperAdmin(req.user)) return next();
 
   const userRoleName = req.user.role?.name;
   if (!requiredRoles.includes(userRoleName)) {
@@ -33,6 +37,7 @@ const requireRoles = (requiredRoles = []) => (req, res, next) => {
  */
 const requirePermissions = (requiredPermissions = []) => (req, res, next) => {
   if (!req.user) return next(ApiError.unauthorized());
+  if (isSuperAdmin(req.user)) return next();
 
   const userPermissions = req.user.role?.permissions?.map((p) => p.key) || [];
   const hasAll = requiredPermissions.every((p) => userPermissions.includes(p));

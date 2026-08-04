@@ -108,6 +108,7 @@ const PERMISSIONS = Object.freeze({
   HSE_MANAGE_AUDITS: 'hse:manage_audits',
   HSE_REPORT_INCIDENT: 'hse:report_incident',
   HSE_MANAGE_INSPECTIONS: 'hse:manage_inspections',
+  HSE_MANAGE_TRAINING: 'hse:manage_training',
 });
 
 module.exports = { PERMISSIONS };
