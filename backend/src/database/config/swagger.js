@@ -1,7 +1,10 @@
 'use strict';
 
+const path = require('path');
 const swaggerJsdoc = require('swagger-jsdoc');
 const config = require('./index');
+
+const modulesRoot = path.join(__dirname, '../../modules');
 
 const options = {
   definition: {
@@ -59,9 +62,10 @@ const options = {
     },
     security: [{ BearerAuth: [] }],
   },
+  // Absolute globs — relative ./src/... fails depending on process.cwd()
   apis: [
-    './src/modules/**/*.routes.js',
-    './src/modules/**/*.controller.js',
+    path.join(modulesRoot, '**/*.routes.js'),
+    path.join(modulesRoot, '**/*.controller.js'),
   ],
 };
 
