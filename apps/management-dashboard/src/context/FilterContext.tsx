@@ -32,10 +32,13 @@ export const FilterProvider = ({ children }: { children: ReactNode }) => {
   });
 
   useEffect(() => {
-    if (user?.department_id) {
+    // Only lock the department filter when the user has a real plant dept code
+    if (user?.department_id && user.department_id !== 'All') {
       setFilters((current) => ({ ...current, department: user.department_id || 'All' }));
+    } else if (user) {
+      setFilters((current) => ({ ...current, department: 'All' }));
     }
-  }, [user?.department_id]);
+  }, [user?.department_id, user]);
 
   const setFilter = (key: keyof Filters, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));

@@ -207,6 +207,16 @@ export const Dashboard = () => {
         });
       } catch (err) {
         console.error('Dashboard fetch error:', err);
+        setRawData({
+          hazards: [], nearMisses: [], incidents: [], capas: [],
+          training: [], inspections: [], drills: [], legal: [], audits: [],
+          totalOrgManhours: 0,
+        });
+        setHazards([]);
+        setNearMisses([]);
+        setIncidents([]);
+        setCapas([]);
+        setTraining([]);
       } finally {
         setLoading(false);
       }

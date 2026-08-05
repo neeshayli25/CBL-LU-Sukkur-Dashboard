@@ -17,6 +17,7 @@ import { Card, CardHeader, CardTitle, CardContent, Button } from '@cbl/ui';
 
 const LoginPage = () => {
   const { login, isLoggingIn, isAuthenticated, error } = useAuth();
+  const isPreview = import.meta.env.VITE_BYPASS_AUTH === 'true';
 
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
@@ -35,6 +36,9 @@ const LoginPage = () => {
           </div>
           <CardTitle className="text-2xl text-foreground tracking-tight font-bold">CBL Sukkur Plant</CardTitle>
           <p className="text-sm text-muted-foreground font-medium">Management Dashboard Portal</p>
+          {isPreview && (
+            <p className="text-xs text-muted-foreground">Local preview: signs in as superadmin against the live API</p>
+          )}
         </CardHeader>
         <CardContent>
           {error && (
@@ -47,7 +51,11 @@ const LoginPage = () => {
             onClick={login}
             disabled={isLoggingIn}
           >
-            {isLoggingIn ? "Authenticating..." : "Sign in with Microsoft SSO"}
+            {isLoggingIn
+              ? 'Authenticating...'
+              : isPreview
+                ? 'Sign in (Local Preview)'
+                : 'Sign in with Microsoft SSO'}
           </Button>
         </CardContent>
       </Card>
