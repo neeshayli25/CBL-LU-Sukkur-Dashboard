@@ -10,7 +10,7 @@ export const useModuleData = (schemaId: string) => {
     if (!schemaId) return;
     setLoading(true);
     try {
-      const response = await moduleService.getAll(schemaId, { page: 1, limit: 20, ...params });
+      const response = await moduleService.getAll(schemaId, { page: 1, limit: 5000, ...params });
       if (response.success) {
         setData(Array.isArray(response.data) ? response.data : []);
         setError(null);
