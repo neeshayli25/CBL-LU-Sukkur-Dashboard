@@ -10,6 +10,7 @@ const {
   toClientRecord,
   excelDateToIso,
   normalizeHeader,
+  collapseIncidentSheetRows,
 } = require('./log-sheet.mapper');
 
 function assertModule(module) {
@@ -182,6 +183,12 @@ class LogSheetService {
       return { module, records: [], validation_errors: ['Sheet is empty'], warnings: [], unmapped_columns: [] };
     }
 
+    // Incident plant sheets: collapse action-item continuation rows into parent incidents
+    let workingRows = rows;
+    if (module === 'incident-log') {
+      workingRows = collapseIncidentSheetRows(rows, { headerRowIndex });
+    }
+
     // Auto-detect header row when the provided index looks like a title/blank row
     let resolvedHeaderIndex = headerRowIndex;
     const aliases = HEADER_ALIASES[module] || {};
@@ -194,11 +201,11 @@ class LogSheetService {
       });
       return hits;
     };
-    if (scoreHeader(rows[resolvedHeaderIndex]) < 2) {
+    if (scoreHeader(workingRows[resolvedHeaderIndex]) < 2) {
       let best = resolvedHeaderIndex;
-      let bestScore = scoreHeader(rows[resolvedHeaderIndex]);
-      for (let i = 0; i < Math.min(rows.length, 8); i += 1) {
-        const s = scoreHeader(rows[i]);
+      let bestScore = scoreHeader(workingRows[resolvedHeaderIndex]);
+      for (let i = 0; i < Math.min(workingRows.length, 8); i += 1) {
+        const s = scoreHeader(workingRows[i]);
         if (s > bestScore) {
           bestScore = s;
           best = i;
@@ -207,18 +214,23 @@ class LogSheetService {
       resolvedHeaderIndex = best;
     }
 
-    if (rows.length <= resolvedHeaderIndex) {
+    // Re-collapse after header detection if needed
+    if (module === 'incident-log' && resolvedHeaderIndex !== headerRowIndex) {
+      workingRows = collapseIncidentSheetRows(rows, { headerRowIndex: resolvedHeaderIndex });
+    }
+
+    if (workingRows.length <= resolvedHeaderIndex) {
       return { module, records: [], validation_errors: ['Sheet is empty'], warnings: [], unmapped_columns: [] };
     }
 
-    const headerRow = rows[resolvedHeaderIndex];
+    const headerRow = workingRows[resolvedHeaderIndex];
     const { mapping, unmapped } = mapHeaders(module, headerRow);
     const records = [];
     const validation_errors = [];
     const warnings = [];
 
-    for (let r = resolvedHeaderIndex + 1; r < rows.length; r += 1) {
-      const cells = [...(rows[r] || [])];
+    for (let r = resolvedHeaderIndex + 1; r < workingRows.length; r += 1) {
+      const cells = [...(workingRows[r] || [])];
       const isEmpty = cells.every((c) => c == null || String(c).trim() === '');
       if (isEmpty) continue;
 
@@ -229,7 +241,7 @@ class LogSheetService {
           const idx = Number(deptIdx);
           if (cells[idx] == null || String(cells[idx]).trim() === '') {
             for (let back = r - 1; back > resolvedHeaderIndex; back -= 1) {
-              const prev = rows[back]?.[idx];
+              const prev = workingRows[back]?.[idx];
               if (prev != null && String(prev).trim() !== '') {
                 cells[idx] = prev;
                 break;

@@ -76,12 +76,21 @@ const INCIDENT_CATEGORY_ALIASES = {
   '1st aid': 'First Aid',
   mtc: 'MTC',
   lti: 'LTI',
+  lta: 'LTI',
   rwc: 'RWC',
   fatality: 'Fatality',
   'minor fire': 'Minor Fire',
   fire: 'Minor Fire',
+  'fire ': 'Minor Fire',
+  'fire incident': 'Minor Fire',
   'significant near miss': 'Significant Near Miss',
+  'significant near-miss': 'Significant Near Miss',
   'near miss': 'Significant Near Miss',
+  'potential near miss': 'Significant Near Miss',
+  'potential near-miss': 'Significant Near Miss',
+  'fatal potential near miss': 'Significant Near Miss',
+  'potential incident': 'Significant Near Miss',
+  'short circuiting': 'Minor Fire',
 };
 
 /** Header aliases per module → canonical field key */
@@ -146,22 +155,29 @@ const HEADER_ALIASES = {
   'incident-log': {
     's.no': 's_no',
     's#': 's_no',
+    'serial #': 's_no',
     date: 'date',
     description: 'description',
+    decription: 'description',
     shift: 'shift',
     'area manager': 'area_manager',
     'gender wise': 'gender',
     gender: 'gender',
     location: 'location',
+    'location wise': 'location',
     department: 'department_id',
+    dept: 'department_id',
     'incident category': 'incident_category_id',
     category: 'incident_category_id',
-    'root cause': 'root_cause_id',
+    'root cause': 'root_cause',
+    'root causes': 'root_cause',
+    'root cause category': 'root_cause_id',
     'action items': 'action_items',
     'immediate cause': 'immediate_cause',
     'corrective actions': 'corrective_actions',
     'preventive actions': 'preventive_actions',
     'responsible person': 'responsible_person',
+    resp: 'responsible_person',
     'risk rating': 'risk_rating_id',
     timeline: 'timeline',
     status: 'status_id',
@@ -255,7 +271,7 @@ const HEADER_ALIASES = {
 const REQUIRED_FIELDS = {
   'hazard-reporting': ['date', 'department_id', 'location', 'originator', 'hazard_category_id', 'description', 'responsible_person', 'risk_rating_id', 'status_id'],
   'near-miss': ['date', 'department_id', 'reported_by', 'location', 'details', 'status_id'],
-  'incident-log': ['date', 'description', 'location', 'department_id', 'incident_category_id', 'status_id'],
+  'incident-log': ['date', 'description', 'department_id', 'incident_category_id', 'status_id'],
   'action-tracker': ['date', 'actions_recommendation', 'department_id', 'responsible_manager', 'status_id'],
   'training-records': ['date', 'department_id', 'trainer', 'topic', 'participants', 'duration_minutes'],
   'audit-management': ['audit_date', 'audit_point', 'department_id', 'status_id'],
@@ -304,7 +320,7 @@ function normalizeRisk(value) {
 
 function normalizeIncidentCategory(value) {
   if (value == null || value === '') return { value: null, warning: null };
-  const raw = String(value).trim();
+  const raw = String(value).replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
   const mapped = INCIDENT_CATEGORY_ALIASES[raw.toLowerCase()];
   if (mapped) return { value: mapped, warning: null };
   return { value: raw, warning: `incident category '${raw}' not in standard list — kept as-is` };
@@ -321,7 +337,7 @@ function normalizeUnsafeType(value) {
   return { value: raw, warning: null };
 }
 
-function excelDateToIso(value) {
+function excelDateToIso(value, { preferDayFirst = true } = {}) {
   if (value == null || value === '') return null;
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
     return value.toISOString().slice(0, 10);
@@ -333,18 +349,119 @@ function excelDateToIso(value) {
   }
   const raw = String(value).trim();
   if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10);
-  // d/m/yyyy or d-m-yyyy
+
+  // Plant sheets use day/month/year (e.g. 6/1/26 = 6 Jan 2026)
   const m = raw.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})$/);
   if (m) {
-    const day = m[1].padStart(2, '0');
-    const month = m[2].padStart(2, '0');
+    let a = Number(m[1]);
+    let b = Number(m[2]);
     let year = m[3];
     if (year.length === 2) year = `20${year}`;
-    return `${year}-${month}-${day}`;
+    let day;
+    let month;
+    if (preferDayFirst) {
+      // If first part > 12 it must be day; if second > 12 it must be month-first
+      if (a > 12 && b <= 12) {
+        day = a; month = b;
+      } else if (b > 12 && a <= 12) {
+        day = b; month = a;
+      } else {
+        day = a; month = b;
+      }
+    } else {
+      day = b; month = a;
+    }
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   }
+
+  // "15th Jan 2020" / "10th March 2020"
+  const named = raw.match(/^(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]+)\s+(\d{2,4})$/);
+  if (named) {
+    const months = {
+      jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3, apr: 4, april: 4,
+      may: 5, jun: 6, june: 6, jul: 7, july: 7, aug: 8, august: 8, sep: 9, september: 9,
+      oct: 10, october: 10, nov: 11, november: 11, dec: 12, december: 12,
+    };
+    const month = months[named[2].toLowerCase()];
+    if (month) {
+      let year = named[3];
+      if (year.length === 2) year = `20${year}`;
+      return `${year}-${String(month).padStart(2, '0')}-${String(named[1]).padStart(2, '0')}`;
+    }
+  }
+
   const parsed = new Date(raw);
   if (!Number.isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10);
   return null;
+}
+
+/**
+ * Collapse plant Incident Log sheets where action-item lines continue under a parent incident.
+ * Parent row has S.No / Date / Description; following rows only fill Action Items (+ Resp/Risk/Status).
+ */
+function collapseIncidentSheetRows(rows, { headerRowIndex = 0 } = {}) {
+  if (!rows?.length) return rows;
+  const { mapping } = mapHeaders('incident-log', rows[headerRowIndex] || []);
+  const idx = (field) => {
+    const hit = Object.entries(mapping).find(([, f]) => f === field);
+    return hit ? Number(hit[0]) : -1;
+  };
+  const iSno = idx('s_no');
+  const iDate = idx('date');
+  const iDesc = idx('description');
+  const iAction = idx('action_items');
+  const iResp = idx('responsible_person');
+  const iRisk = idx('risk_rating_id');
+  const iTimeline = idx('timeline');
+  const iStatus = idx('status_id');
+
+  const out = [rows[headerRowIndex]];
+  let current = null;
+
+  for (let r = headerRowIndex + 1; r < rows.length; r += 1) {
+    const cells = [...(rows[r] || [])];
+    const empty = cells.every((c) => c == null || String(c).trim() === '');
+    if (empty) continue;
+
+    const sno = iSno >= 0 ? cells[iSno] : null;
+    const date = iDate >= 0 ? cells[iDate] : null;
+    const desc = iDesc >= 0 ? cells[iDesc] : null;
+    const action = iAction >= 0 ? cells[iAction] : null;
+    const isParent = (sno != null && String(sno).trim() !== '')
+      || ((date != null && String(date).trim() !== '') && (desc != null && String(desc).trim() !== ''));
+
+    if (isParent) {
+      if (current) out.push(current);
+      current = cells;
+      continue;
+    }
+
+    // Continuation / action-item row — append onto parent
+    if (current && action != null && String(action).trim() !== '') {
+      const prev = current[iAction] != null ? String(current[iAction]).trim() : '';
+      const next = String(action).trim();
+      if (iAction >= 0) current[iAction] = prev ? `${prev}\n${next}` : next;
+      // Keep latest non-empty assignment metadata when parent left them blank
+      if (iResp >= 0 && (!current[iResp] || String(current[iResp]).trim() === '') && cells[iResp]) {
+        current[iResp] = cells[iResp];
+      }
+      if (iRisk >= 0 && (!current[iRisk] || String(current[iRisk]).trim() === '') && cells[iRisk]) {
+        current[iRisk] = cells[iRisk];
+      }
+      if (iTimeline >= 0 && (!current[iTimeline] || String(current[iTimeline]).trim() === '') && cells[iTimeline]) {
+        current[iTimeline] = cells[iTimeline];
+      }
+      if (iStatus >= 0 && cells[iStatus] && String(cells[iStatus]).trim() !== '') {
+        // Prefer Open/WIP over Done if any child is still open
+        const cur = String(current[iStatus] || '').toLowerCase();
+        const child = String(cells[iStatus]).toLowerCase();
+        if (!cur || cur === 'done' || cur === 'closed') current[iStatus] = cells[iStatus];
+        if (['open', 'wip', 'pending', 'work in progress'].includes(child)) current[iStatus] = cells[iStatus];
+      }
+    }
+  }
+  if (current) out.push(current);
+  return out;
 }
 
 function yesNo(value) {
@@ -408,8 +525,8 @@ function rowToRecord(module, mapping, cells, rowNumber) {
     record[field] = typeof cell === 'string' ? cell.trim() : cell;
   });
 
-  // Dates
-  ['date', 'target_date', 'audit_date', 'timeline', 'due_date', 'completion_date'].forEach((f) => {
+  // Dates (timeline often has free text like "Daily-Basis" / "Immediately" — keep as-is if not a date)
+  ['date', 'target_date', 'audit_date', 'due_date', 'completion_date'].forEach((f) => {
     if (record[f] != null) {
       const iso = excelDateToIso(record[f]);
       if (!iso) {
@@ -419,6 +536,11 @@ function rowToRecord(module, mapping, cells, rowNumber) {
       }
     }
   });
+  if (record.timeline != null) {
+    const iso = excelDateToIso(record.timeline);
+    if (iso) record.timeline = iso;
+    // else keep free-text timeline
+  }
 
   if (record.department_id != null) {
     const d = normalizeDepartment(record.department_id);
@@ -542,4 +664,5 @@ module.exports = {
   rowToRecord,
   extractIndexedFields,
   toClientRecord,
+  collapseIncidentSheetRows,
 };

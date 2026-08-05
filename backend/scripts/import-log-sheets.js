@@ -51,6 +51,12 @@ const JOBS = [
     sheetName: 'Critical Audit Plan',
     headerRowIndex: 1,
   },
+  {
+    module: 'incident-log',
+    file: path.join(UPLOADS, 'Incident_Log_YTD-June-26_6a83.xlsx'),
+    sheetName: 'Incidents Log YTD-JAN-2026',
+    headerRowIndex: 0,
+  },
 ];
 
 async function login() {
