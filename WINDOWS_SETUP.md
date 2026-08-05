@@ -79,3 +79,15 @@ mysql -h 127.0.0.1 -P 3307 -u root -psecret -e "SHOW DATABASES;"
 # Backend health
 curl http://localhost:5000/api/health
 ```
+
+## “Too many requests. Please slow down.”
+
+Login is rate-limited (about 10 failed tries / 15 minutes). Preview sign-in
+retries can hit that quickly.
+
+**Immediate unblock:** in the backend terminal press `Ctrl+C`, then run
+`npm run dev` again. The counter is in memory and resets on restart.
+Then click **Sign in (Local Preview)** once.
+
+On current `main`/latest code, rate limits are skipped when
+`NODE_ENV=development`.
