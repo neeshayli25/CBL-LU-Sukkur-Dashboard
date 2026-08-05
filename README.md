@@ -14,6 +14,18 @@ Full-stack Health, Safety, and Environment (HSE) management system for Continent
 
 ---
 
+## Quick Start (Windows)
+
+If MySQL says `Access denied for user 'root'@'localhost'`, use Docker MySQL:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\backend\scripts\setup-windows.ps1
+```
+
+Details: [`WINDOWS_SETUP.md`](./WINDOWS_SETUP.md)
+
+---
+
 ## Quick Start (verified)
 
 ### Prerequisites
