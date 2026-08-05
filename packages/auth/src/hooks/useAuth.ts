@@ -39,6 +39,34 @@ export const useAuth = () => {
     setError(null);
     try {
       if (PREVIEW_BYPASS) {
+        // Local/preview: use seeded password login so API calls carry a real JWT
+        try {
+          const email = import.meta.env.VITE_PREVIEW_EMAIL || "superadmin@cblapp.com";
+          const password = import.meta.env.VITE_PREVIEW_PASSWORD || "Admin@123!";
+          const loginResponse = await authClient.login(email, password);
+          const backendUser = loginResponse.user;
+          const tokens = loginResponse.tokens;
+          if (backendUser && tokens?.accessToken) {
+            loginUser({
+              id: backendUser.id.toString(),
+              email: backendUser.email,
+              name: backendUser.name || `${backendUser.firstName || ""} ${backendUser.lastName || ""}`.trim(),
+              role: backendUser.role || backendUser.roles?.[0] || "System Administrator",
+              roles: backendUser.roles || ["super_admin", "System Administrator"],
+              permissions: [
+                ...(backendUser.permissions || []),
+                "dashboard.view", "hazards.create", "hazards.update", "hazards.delete",
+                "reports.export", "records.approve",
+              ],
+              department_id: backendUser.department_id?.toString() || backendUser.departmentId?.toString() || "All",
+              plant_id: backendUser.plant_id?.toString() || backendUser.plantId?.toString() || "CBL-LU-SUKKUR",
+            }, tokens.accessToken);
+            if (tokens.refreshToken) tokenStore.setRefreshToken(tokens.refreshToken);
+            return;
+          }
+        } catch (previewErr) {
+          console.warn("Preview password login failed; falling back to offline preview user", previewErr);
+        }
         loginUser(PREVIEW_USER);
         return;
       }
