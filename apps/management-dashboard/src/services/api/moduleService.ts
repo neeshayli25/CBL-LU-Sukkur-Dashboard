@@ -7,30 +7,18 @@ export interface ApiResponse<T> {
   meta?: any;
 }
 
-const schemaToEndpoint: Record<string, string> = {
-  'hazard-reporting': '/hazards',
-  'near-miss': '/near-misses',
-  'incident-log': '/incidents',
-  'training-records': '/trainings',
-  'action-tracker': '/corrective-actions',
-  'audit-management': '/audits',
-  'inspection-records': '/inspections',
-};
-
+/** Plant log-sheet modules are served from /log-sheets/:moduleId */
 const getEndpoint = (schemaId: string): string => {
-  const endpoint = schemaToEndpoint[schemaId];
-  if (!endpoint) {
-    throw new Error(`No endpoint mapped for schemaId: ${schemaId}`);
-  }
-  return endpoint;
+  if (!schemaId) throw new Error('schemaId is required');
+  return `/log-sheets/${schemaId}`;
 };
 
 export const moduleService = {
   getAll: async (schemaId: string, params?: Record<string, unknown>): Promise<ApiResponse<any[]>> => {
     const endpoint = getEndpoint(schemaId);
-    const response = await apiClient.get(endpoint, { params });
-    // Assuming backend returns { success: true, data: [...], message: "..." }
-    // which aligns with ApiResponse utility from the backend.
+    const response = await apiClient.get(endpoint, {
+      params: { limit: 5000, ...(params || {}) },
+    });
     const payload = response.data;
     return {
       success: payload?.success !== false,
@@ -60,7 +48,11 @@ export const moduleService = {
 
   updateStatus: async (schemaId: string, id: string, status: string, reason?: string) => {
     const endpoint = getEndpoint(schemaId);
-    const response = await apiClient.patch(`${endpoint}/${id}/status`, { status, reason });
+    const response = await apiClient.patch(`${endpoint}/${id}/status`, {
+      status,
+      status_id: status,
+      reason,
+    });
     return response.data;
   },
 
@@ -76,9 +68,34 @@ export const moduleService = {
     return response.data;
   },
 
+  importFile: async (
+    schemaId: string,
+    file: File,
+    options?: { sheetName?: string; headerRowIndex?: number; force?: boolean }
+  ) => {
+    const endpoint = getEndpoint(schemaId);
+    const form = new FormData();
+    form.append('file', file);
+    if (options?.sheetName) form.append('sheetName', options.sheetName);
+    if (options?.headerRowIndex != null) form.append('headerRowIndex', String(options.headerRowIndex));
+    if (options?.force) form.append('force', 'true');
+    const response = await apiClient.post(`${endpoint}/import`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
   export: async (schemaId: string, params?: Record<string, unknown>) => {
     const endpoint = getEndpoint(schemaId);
-    const response = await apiClient.get(`${endpoint}/export`, { params, responseType: 'blob' });
+    const response = await apiClient.get(`${endpoint}/export`, {
+      params: { format: 'csv', ...(params || {}) },
+      responseType: 'blob',
+    });
     return response.data;
-  }
+  },
+
+  kpiBundle: async (params?: Record<string, unknown>) => {
+    const response = await apiClient.get('/log-sheets/kpi-bundle', { params });
+    return response.data;
+  },
 };

@@ -163,16 +163,16 @@ export const Dashboard = () => {
       setLoading(true);
       try {
         const [hRes, nmRes, incRes, capRes, trRes, insRes, audRes] = await Promise.all([
-          moduleService.getAll('hazard-reporting', { page: 1, limit: 20, ...filters }),
-          moduleService.getAll('near-miss', { page: 1, limit: 20, ...filters }),
-          moduleService.getAll('incident-log', { page: 1, limit: 20, ...filters }),
-          moduleService.getAll('action-tracker', { page: 1, limit: 20, ...filters }),
-          moduleService.getAll('training-records', { page: 1, limit: 20, ...filters }),
-          moduleService.getAll('inspection-records', { page: 1, limit: 20, ...filters }),
-          moduleService.getAll('audit-management', { page: 1, limit: 20, ...filters }),
+          moduleService.getAll('hazard-reporting', { page: 1, limit: 5000, ...filters }),
+          moduleService.getAll('near-miss', { page: 1, limit: 5000, ...filters }),
+          moduleService.getAll('incident-log', { page: 1, limit: 5000, ...filters }),
+          moduleService.getAll('action-tracker', { page: 1, limit: 5000, ...filters }),
+          moduleService.getAll('training-records', { page: 1, limit: 5000, ...filters }),
+          moduleService.getAll('inspection-records', { page: 1, limit: 5000, ...filters }),
+          moduleService.getAll('audit-management', { page: 1, limit: 5000, ...filters }),
         ]);
-        const drRes = { data: [] };
-        const legRes = { data: [] };
+        const drRes = { data: [] as any[] };
+        const legRes = { data: [] as any[] };
 
         const applyFilters = (data: any[]) => {
           let f = [...data];
@@ -222,7 +222,7 @@ export const Dashboard = () => {
     };
   }, [filters]);
 
-  const { leadingMetricsDetail, laggingMetricsDetail } = useDashboardMetrics(rawData);
+  const { leadingMetricsDetail, laggingMetricsDetail, deptScorecard, safetyPyramid, summary } = useDashboardMetrics(rawData);
 
   // ===== KPI Computations (unchanged business logic) =====
   const totalIncidents       = incidents.length;
@@ -236,8 +236,8 @@ export const Dashboard = () => {
   const totalTrainingSessions  = training.length;
   const totalTrainingManhours  = Math.round(training.reduce((sum, t) => sum + (Number(t.manhours) || 0), 0));
 
-  const totalOpenCapas   = capas.filter(c => ['Open', 'Pending', 'Work in Progress'].includes(c.status_id)).length;
-  const totalClosedCapas = capas.filter(c => c.status_id === 'Close' || c.status_id === 'Closed').length;
+  const totalOpenCapas   = capas.filter(c => ['Open', 'Pending', 'Work in Progress', 'WIP'].includes(c.status_id)).length;
+  const totalClosedCapas = capas.filter(c => ['Close', 'Closed', 'Done', 'DONE'].includes(String(c.status_id || ''))).length;
   const overdueCapas     = capas.filter(c => {
     if (['Close','Closed'].includes(c.status_id)) return false;
     if (!c.due_date) return false;
@@ -360,6 +360,68 @@ export const Dashboard = () => {
             subtleLine="Requires immediate action"
             onClick={() => navigate('/hazard-reporting')}
           />
+        </div>
+
+        {/* ============ SAFETY PYRAMID + DEPT SCORECARD (PPT mirror) ============ */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+          <Panel className="p-5">
+            <SectionHeader title="Safety Pyramid — YTD" />
+            <div className="space-y-2">
+              {[
+                { label: 'Fatalities', value: safetyPyramid?.fatalities ?? 0, width: '35%' },
+                { label: 'Recordable Injuries', value: safetyPyramid?.recordable ?? 0, width: '45%' },
+                { label: 'Minor Fire', value: safetyPyramid?.minorFire ?? 0, width: '50%' },
+                { label: 'First Aid', value: safetyPyramid?.firstAid ?? 0, width: '60%' },
+                { label: 'Near Miss', value: safetyPyramid?.nearMiss ?? 0, width: '75%' },
+                { label: 'Unsafe Acts', value: safetyPyramid?.unsafeActs ?? 0, width: '85%' },
+                { label: 'Hazards', value: safetyPyramid?.hazards ?? 0, width: '100%' },
+              ].map((tier) => (
+                <div key={tier.label} className="flex flex-col items-center">
+                  <div
+                    className="text-center text-white text-[12px] font-semibold py-2 rounded-sm"
+                    style={{ width: tier.width, backgroundColor: '#7B1010' }}
+                  >
+                    {tier.label}: {Number(tier.value).toLocaleString()}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[11px] text-[#6B7280] mt-4">
+              Closure {summary?.hazardClosureRate ?? 0}% · Training {Number(summary?.totalTrainingManhours || 0).toLocaleString()} MH · CAPA {summary?.capaClosureRate ?? 0}%
+            </p>
+          </Panel>
+
+          <Panel className="xl:col-span-2 p-5 overflow-x-auto">
+            <SectionHeader title="Departmental HSE KPIs" />
+            <table className="w-full text-[12px]">
+              <thead>
+                <tr className="text-left text-[#6B7280] border-b border-[#F0F0F0]">
+                  <th className="py-2 pr-3 font-semibold">Dept</th>
+                  <th className="py-2 pr-3 font-semibold">Hazards</th>
+                  <th className="py-2 pr-3 font-semibold">Closed %</th>
+                  <th className="py-2 pr-3 font-semibold">Near Miss</th>
+                  <th className="py-2 pr-3 font-semibold">Unsafe Acts</th>
+                  <th className="py-2 pr-3 font-semibold">Training MH</th>
+                  <th className="py-2 pr-3 font-semibold">CAPA %</th>
+                  <th className="py-2 font-semibold">FA / LTI</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(deptScorecard || []).map((row) => (
+                  <tr key={row.department} className="border-b border-[#F8F8F8] hover:bg-[#FAFAFA]">
+                    <td className="py-2 pr-3 font-semibold text-[#1A1818]">{row.department}</td>
+                    <td className="py-2 pr-3 tabular-nums">{row.hazards}</td>
+                    <td className="py-2 pr-3 tabular-nums">{row.hazardClosurePct}%</td>
+                    <td className="py-2 pr-3 tabular-nums">{row.nearMiss}</td>
+                    <td className="py-2 pr-3 tabular-nums">{row.unsafeActs}</td>
+                    <td className="py-2 pr-3 tabular-nums">{row.trainingManhours}</td>
+                    <td className="py-2 pr-3 tabular-nums">{row.capaClosurePct}%</td>
+                    <td className="py-2 tabular-nums">{row.firstAid} / {row.lti}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Panel>
         </div>
 
         {/* ============ LEADING & LAGGING STRIP (Stitch design) ============ */}

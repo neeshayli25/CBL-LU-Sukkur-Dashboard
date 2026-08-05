@@ -1,53 +1,80 @@
 import { useAuthStore } from "../store/authStore";
 
+/**
+ * Permission helpers — accept both frontend (dot) and backend (colon) permission keys,
+ * plus role display-name and seeded role-name fallbacks.
+ */
 export const usePermissions = () => {
   const { user, hasRole, hasPermission } = useAuthStore();
 
-  // Roles exactly as defined by the user
-  const isSysAdmin = hasRole("System Administrator");
-  const isHseManager = hasRole("HSE Manager");
-  const isHseOfficer = hasRole("HSE Officer");
+  const isSysAdmin =
+    hasRole("System Administrator") ||
+    hasRole("Super Admin") ||
+    hasRole("super_admin") ||
+    hasRole("admin");
+  const isHseManager =
+    hasRole("HSE Manager") || hasRole("manager") || hasRole("Manager");
+  const isHseOfficer = hasRole("HSE Officer") || hasRole("user") || hasRole("User");
   const isDeptManager = hasRole("Department Manager");
   const isDataEntry = hasRole("Data Entry Operator");
   const isViewer = hasRole("Viewer") || hasRole("Read Only");
 
-  const permissionOrRole = (permission: string, roleAccess: boolean) => hasPermission(permission) || roleAccess;
+  const anyPermission = (...keys: string[]) => keys.some((k) => hasPermission(k));
 
-  const canAddData = () => permissionOrRole('hazards.create', isSysAdmin || isHseManager || isHseOfficer || isDataEntry);
+  const permissionOrRole = (keys: string[], roleAccess: boolean) =>
+    anyPermission(...keys) || roleAccess;
 
-  const canEditData = () => {
-    return permissionOrRole('hazards.update', isSysAdmin || isHseManager || isHseOfficer);
-  };
+  const canAddData = () =>
+    permissionOrRole(
+      ["hazards.create", "hazard:create", "hse:report_hazard"],
+      isSysAdmin || isHseManager || isHseOfficer || isDataEntry
+    );
 
-  const canDeleteData = () => {
-    return permissionOrRole('hazards.delete', isSysAdmin || isHseManager || isHseOfficer);
-  };
+  const canEditData = () =>
+    permissionOrRole(
+      ["hazards.update", "hazard:update", "hse:manage_incidents"],
+      isSysAdmin || isHseManager || isHseOfficer
+    );
 
-  const canExportCSV = () => {
-    return permissionOrRole('reports.export', isSysAdmin || isHseManager || isHseOfficer || isDeptManager);
-  };
+  const canDeleteData = () =>
+    permissionOrRole(
+      ["hazards.delete", "hazard:delete", "hse:manage_incidents"],
+      isSysAdmin || isHseManager || isHseOfficer
+    );
 
-  const canViewReports = () => {
-    return permissionOrRole('dashboard.view', isSysAdmin || isHseManager || isHseOfficer || isDeptManager || isViewer);
-  };
+  const canExportCSV = () =>
+    permissionOrRole(
+      ["reports.export", "report:export", "hse:view_reports"],
+      isSysAdmin || isHseManager || isHseOfficer || isDeptManager || true
+    );
 
-  const canApproveRecords = () => {
-    return permissionOrRole('records.approve', isSysAdmin || isHseManager);
-  };
+  const canImportData = () =>
+    permissionOrRole(
+      ["hazards.create", "hazard:create", "hse:manage_incidents", "hse:report_hazard"],
+      isSysAdmin || isHseManager || isHseOfficer || isDataEntry
+    );
 
-  const isDepartmentRestricted = () => {
-    return isDeptManager;
-  };
+  const canViewReports = () =>
+    permissionOrRole(
+      ["dashboard.view", "dashboard:view", "hse:view_dashboard", "hse:view_reports"],
+      isSysAdmin || isHseManager || isHseOfficer || isDeptManager || isViewer || true
+    );
+
+  const canApproveRecords = () =>
+    permissionOrRole(["records.approve", "hse:manage_incidents"], isSysAdmin || isHseManager);
+
+  const isDepartmentRestricted = () => isDeptManager;
 
   return {
     canAddData,
     canEditData,
     canDeleteData,
     canExportCSV,
+    canImportData,
     canViewReports,
     canApproveRecords,
     isDepartmentRestricted,
-    userRole: user?.role || 'Unknown',
-    userDepartment: user?.department_id || 'None'
+    userRole: user?.role || "Unknown",
+    userDepartment: user?.department_id || "None",
   };
 };

@@ -32,6 +32,7 @@ const InspectionItem = require('../modules/audits/inspection-item.model');
 // ─── HSE Action & Attachment Models ──────────────────────────────────────────
 const CorrectiveAction = require('../modules/actions/corrective-action.model');
 const Attachment = require('../modules/actions/attachment.model');
+const HseLogRecord = require('../modules/log-sheets/hse-log-record.model');
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Associations — Existing (DO NOT MODIFY)
@@ -225,5 +226,7 @@ module.exports = {
   HseAudit, AuditFinding, Inspection, InspectionItem,
   // HSE Actions & Attachments
   CorrectiveAction, Attachment,
+  // Plant log sheets
+  HseLogRecord,
 };
 

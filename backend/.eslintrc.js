@@ -17,4 +17,17 @@ module.exports = {
     'class-methods-use-this': 'off',
     'no-unused-vars': ['error', { argsIgnorePattern: 'next' }],
   },
+  overrides: [
+    {
+      files: ['src/modules/log-sheets/**/*.js', 'scripts/import-log-sheets.js'],
+      rules: {
+        'no-await-in-loop': 'off',
+        'no-continue': 'off',
+        'no-restricted-syntax': 'off',
+        'camelcase': 'off',
+        'object-curly-newline': 'off',
+        'global-require': 'off',
+      },
+    },
+  ],
 };

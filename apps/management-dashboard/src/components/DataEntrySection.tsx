@@ -305,10 +305,34 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
   const [closeHazardData, setCloseHazardData] = useState({ closingProof: '', closingRemarks: '' });
   const PAGE_SIZE = 15;
 
-  const { canAddData, canEditData, canDeleteData, canExportCSV } = permissions;
+  const { canAddData, canEditData, canDeleteData, canExportCSV, canImportData } = permissions;
+  const [importBusy, setImportBusy] = useState(false);
+  const [importMessage, setImportMessage] = useState<string | null>(null);
+  const importInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => { fetchAll(); }, [schema.id, fetchAll]);
   useEffect(() => { setCurrentPage(1); }, [filters, searchQuery, schema.id]);
+
+  const handleImportFile = async (file: File) => {
+    setImportBusy(true);
+    setImportMessage(null);
+    try {
+      // Plant Excel sheets often put a title on row 1 and headers on row 2
+      const headerRowIndex = ['hazard-reporting', 'near-miss', 'action-tracker', 'training-records'].includes(schema.id)
+        ? 1
+        : 0;
+      const result = await moduleService.importFile(schema.id, file, { headerRowIndex });
+      const imported = result?.data?.imported ?? result?.data?.created ?? 0;
+      const errors = result?.data?.validation_errors?.length || 0;
+      setImportMessage(`Imported ${imported} rows${errors ? ` (${errors} validation flags)` : ''}.`);
+      await fetchAll();
+    } catch (error: any) {
+      setImportMessage(error?.response?.data?.message || error?.message || 'Import failed');
+    } finally {
+      setImportBusy(false);
+      if (importInputRef.current) importInputRef.current.value = '';
+    }
+  };
 
   const applyComputes = (data: any, currentSchema: SectionConfig, allEntries: any[]) => {
     const nextData = { ...data };
@@ -654,6 +678,12 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
         breadcrumbs={[schema.title]}
         subtitle={`${filteredEntries.length} records available`}
         actions={[
+          ...(canImportData?.() ? [{
+            label: importBusy ? 'Importing…' : 'Import Excel',
+            icon: <Upload />,
+            onClick: () => importInputRef.current?.click(),
+            variant: 'outlined' as const,
+          }] : []),
           ...(canExportCSV() ? [{
             label: 'Export CSV',
             icon: <Download />,
@@ -668,6 +698,19 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
           }] : []),
         ]}
       >
+        <input
+          ref={importInputRef}
+          type="file"
+          accept=".xlsx,.xls,.csv"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void handleImportFile(file);
+          }}
+        />
+        {importMessage ? (
+          <p className="text-[12px] text-[#374151] mb-2 px-1">{importMessage}</p>
+        ) : null}
         <div className="flex flex-wrap items-center gap-3">
           <FilterBar />
           <button onClick={() => setShowReviewPanel(true)} className="h-8 px-3 text-[12px] font-medium rounded-md border border-[#DEDEDE] bg-white text-[#374151] hover:bg-[#F5F5F5] inline-flex items-center gap-1.5">
@@ -974,6 +1017,12 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
         breadcrumbs={[schema.title]}
         subtitle={`${filteredEntries.length} records${searchQuery ? ` filtered by "${searchQuery}"` : ''}`}
         actions={[
+          ...(canImportData?.() ? [{
+            label: importBusy ? 'Importing…' : 'Import Excel',
+            icon: <Upload />,
+            onClick: () => importInputRef.current?.click(),
+            variant: 'outlined' as const,
+          }] : []),
           ...(canExportCSV() ? [{
             label: 'Export CSV',
             icon: <Download />,
@@ -988,6 +1037,19 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
           }] : []),
         ]}
       >
+        <input
+          ref={importInputRef}
+          type="file"
+          accept=".xlsx,.xls,.csv"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void handleImportFile(file);
+          }}
+        />
+        {importMessage ? (
+          <p className="text-[12px] text-[#374151] mb-2 px-1">{importMessage}</p>
+        ) : null}
         <div className="flex flex-wrap items-center gap-3">
           <FilterBar />
           <button onClick={() => setShowMobileFilters(true)} className="md:hidden h-8 px-3 text-[12px] font-medium rounded-md border border-[#DEDEDE] bg-white text-[#374151] inline-flex items-center gap-1.5">

@@ -92,7 +92,9 @@ export const STATUSES = [
   'Closed',
   'Pending',
   'Work in Progress',
-  'Cancelled'
+  'Cancelled',
+  'Done',
+  'WIP',
 ];
 
 export const CHART_COLORS = {
