@@ -1,127 +1,104 @@
-# START HERE — Preview / Presentation (cloud database)
+# START HERE — localhost (Windows)
 
-**Goal:** Show the HSE dashboard with your real plant Excel data.  
-**No local MySQL.** **No Microsoft SSO.** Just preview login.
-
----
-
-## Step 1 — Get a free cloud MySQL database
-
-Pick any MySQL 8 host (all work the same way):
-
-| Provider | Notes |
-|----------|-------|
-| [Railway](https://railway.app) | New project → Add MySQL → copy connection vars |
-| [Aiven](https://aiven.io) | Free trial MySQL |
-| [db4free.net](https://db4free.net) | Free, good for demos |
-
-You need these 5 values:
-
-- **Host** (e.g. `xxx.railway.app`)
-- **Port** (usually `3306`)
-- **Database name** (create `cbl_db` or use the default they give you)
-- **Username**
-- **Password**
-
-Most cloud hosts require **SSL** — set `DB_SSL=true`.
+**Goal:** Run backend + frontend + database on **localhost** with your plant Excel data loaded.  
+**No cloud DB. No Microsoft SSO.** Local Preview login only.
 
 ---
 
-## Step 2 — Save credentials
-
-Copy the example file and fill in your values:
+## One command (recommended)
 
 ```powershell
 cd "C:\Users\Nisha Ali\CBL-LU-Sukkur-Dashboard"
-copy backend\.env.cloud.example backend\.env.cloud
-notepad backend\.env.cloud
-```
-
-Example:
-
-```env
-DB_HOST=your-host.railway.app
-DB_PORT=3306
-DB_NAME=cbl_db
-DB_USER=root
-DB_PASSWORD=your_password_here
-DB_SSL=true
-```
-
----
-
-## Step 3 — Run the app
-
-```powershell
 git pull origin main
-powershell -ExecutionPolicy Bypass -File .\start-preview.ps1
+powershell -ExecutionPolicy Bypass -File .\start-local.ps1
 ```
 
-This will:
-1. Connect to your **cloud MySQL** (not local)
-2. Create tables + seed superadmin user
-3. Import all plant Excel files from `data/imports/`
-4. Start backend + frontend
+This script will:
+1. **Try Docker MySQL first** (port **3307**) — most reliable, no Windows MySQL fights
+2. Fall back to **Windows MySQL service** (port **3306**) if Docker is not available
+3. Test DB connection before migrate
+4. Migrate + seed superadmin user
+5. Import all plant Excel files from `data/imports/` (~5,000 rows)
+6. Start backend (:5000) and frontend (:5173)
 
 ---
 
-## Step 4 — Login
+## Login
 
 Open **http://localhost:5173**
 
 - Click **Sign in (Local Preview)**
 - Email: `superadmin@cblapp.com`
 - Password: `Admin@123!`
-- Avatar must show **SA**
-
-You should see data in:
-- Hazard Reporting, Near Miss, Incident Log
-- Action Tracker, Training Records, Critical Audit Plan
-- Dashboard KPIs
-
-You can **add new log entries** in each section — they save to the cloud database.
+- Avatar must show **SA** (not UP)
 
 ---
 
-## Manual start (if script fails)
+## Database options
+
+| Method | Port | When to use |
+|--------|------|-------------|
+| **Docker MySQL** (recommended) | 3307 | Docker Desktop installed — `start-local.ps1` picks this automatically |
+| **Windows MySQL service** | 3306 | No Docker; service `MySQL80_New` running, password `secret` |
+
+Credentials (both methods):
+- Host: `127.0.0.1` (always use this, not `localhost`)
+- User: `root`
+- Password: `secret`
+- Database: `cbl_db`
+
+---
+
+## Manual setup (if script fails)
+
+### Option A — Docker MySQL (easiest)
 
 ```powershell
-cd "C:\Users\Nisha Ali\CBL-LU-Sukkur-Dashboard"
+docker compose -f docker-compose.db.yml up -d
 npm install
+node backend\scripts\setup-local-mysql.js --port 3307
+```
 
-node backend\scripts\setup-cloud-mysql.js
+### Option B — Windows MySQL service
 
+```powershell
+Start-Service MySQL80_New
+npm install
+node backend\scripts\setup-local-mysql.js --port 3306
+```
+
+Then two terminals:
+
+```powershell
+# Terminal 1
 cd backend
 npm run dev
-```
 
-Second terminal:
-
-```powershell
-cd "C:\Users\Nisha Ali\CBL-LU-Sukkur-Dashboard\apps\management-dashboard"
+# Terminal 2
+cd apps\management-dashboard
 npm run dev
 ```
 
-Ensure `apps\management-dashboard\.env` has:
+---
 
-```env
-VITE_BYPASS_AUTH=true
-VITE_PREVIEW_EMAIL=superadmin@cblapp.com
-VITE_PREVIEW_PASSWORD=Admin@123!
+## Test database connectivity
+
+```powershell
+cd backend
+node scripts\test-db-connection.js
+node scripts\test-db-connection.js --port 3307
 ```
 
 ---
 
 ## Re-import plant Excel data
 
-If you need to reload all files from scratch:
-
 ```powershell
 cd backend
 node scripts\import-plant-data.js --force
 ```
 
-Excel files live in `data/imports/` (already in the repo).
+Files are in `data/imports/` (bundled in the repo).
 
 ---
 
@@ -129,27 +106,42 @@ Excel files live in `data/imports/` (already in the repo).
 
 | Problem | Fix |
 |---------|-----|
-| `Cloud MySQL credentials missing` | Create `backend/.env.cloud` from the example |
-| `ECONNREFUSED` / timeout | Check host, port, firewall; allow your IP on cloud DB |
-| SSL error | Set `DB_SSL=true` in `.env.cloud` |
-| Empty tables / zeros | Run `node backend\scripts\import-plant-data.js --force` |
-| Avatar **UP** | Set `VITE_BYPASS_AUTH=true`, restart frontend |
-| `401` on API | Use Local Preview login (gets real JWT) |
+| `Access denied for user 'root'` | Wrong password — run setup with `--password YOURPASS` or reset MySQL to `secret` |
+| `ECONNREFUSED 127.0.0.1:3306` | MySQL not running — use Docker or `Start-Service MySQL80_New` |
+| `ECONNREFUSED 127.0.0.1:3307` | Run `docker compose -f docker-compose.db.yml up -d` |
+| Backend crash loop | Run `node backend\scripts\test-db-connection.js` first |
+| Blank frontend / missing vite | Run `npm install` from repo root |
+| Zeros on dashboard | Run `node backend\scripts\import-plant-data.js --force` |
+| Avatar **UP** / 401 errors | Set `VITE_BYPASS_AUTH=true` in `apps\management-dashboard\.env`, restart frontend |
+| `Please install sqlite3` | Do **not** use sqlite on Windows — use MySQL path above |
 
 ---
 
-## Plant data files (bundled in repo)
+## Health checks
 
-| File | Module |
-|------|--------|
-| `Hazard_Log_Sheet_YTD-June-2026_ab87.xlsx` | Hazard + Near Miss |
-| `Action_Tracker-_June__-_26_-_Copy_5e9c.xlsx` | Action Tracker |
-| `Departmental_Training_Log_YTD-June-2026_9bdb.xlsx` | Training Records |
-| `DCS_Required_For_PRJ_6262.xlsx` | Critical Audit Plan |
-| `Incident_Log_YTD-June-26_6a83.xlsx` | Incident Log |
+```powershell
+curl http://localhost:5000/api/health
+```
+
+Expected: `"Server is healthy"`
+
+---
+
+## Plant data loaded
+
+| Module | ~Records |
+|--------|----------|
+| Hazard Reporting | 1,795 |
+| Near Miss | 123 |
+| Action Tracker | 1,982 |
+| Training Records | 1,049 |
+| Critical Audit Plan | 40 |
+| Incident Log | 18 |
+
+You can add new entries in any section — they save to localhost MySQL.
 
 ---
 
 ## Microsoft SSO
 
-Skip for now. Come back to it only after preview works.
+Skip for now. Use Local Preview until everything else works.

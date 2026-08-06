@@ -1,19 +1,34 @@
 'use strict';
 
 /**
- * Windows-friendly local setup using the installed MySQL service
- * (MySQL80 / MySQL80_New) — no Visual Studio, no sqlite3 native build,
- * no Workbench required for day-to-day use.
+ * Localhost MySQL setup — Windows service (3306) or Docker (3307).
+ * Tests connection, creates DB, migrates, seeds, imports plant Excel data.
  *
- * From repo root: node backend/scripts/setup-local-mysql.js
+ * From repo root:
+ *   node backend/scripts/setup-local-mysql.js
+ *   node backend/scripts/setup-local-mysql.js --port 3307
  */
 
 const fs = require('fs');
 const path = require('path');
+const mysql = require('mysql2/promise');
 const { spawnSync } = require('child_process');
 
 const backendDir = path.join(__dirname, '..');
 const rootDir = path.join(backendDir, '..');
+
+function arg(name, fallback) {
+  const idx = process.argv.indexOf(`--${name}`);
+  if (idx !== -1 && process.argv[idx + 1]) return process.argv[idx + 1];
+  return fallback;
+}
+
+const DB_HOST = arg('host', '127.0.0.1');
+const DB_PORT = Number(arg('port', process.env.LOCAL_DB_PORT || 3306));
+const DB_NAME = arg('name', 'cbl_db');
+const DB_USER = arg('user', 'root');
+const DB_PASSWORD = arg('password', 'secret');
+const skipImport = process.argv.includes('--skip-import');
 
 function run(cmd, args, cwd) {
   const isWin = process.platform === 'win32';
@@ -29,21 +44,58 @@ function run(cmd, args, cwd) {
   }
 }
 
-console.log('Installing backend dependencies (mysql2; sqlite3 optional)...');
+async function testAndCreateDb() {
+  console.log(`Testing MySQL ${DB_USER}@${DB_HOST}:${DB_PORT} ...`);
+  let conn;
+  try {
+    conn = await mysql.createConnection({
+      host: DB_HOST,
+      port: DB_PORT,
+      user: DB_USER,
+      password: DB_PASSWORD,
+      connectTimeout: 10000,
+    });
+  } catch (err) {
+    console.error('\nMySQL connection failed:', err.message);
+    console.error('\n--- How to fix ---');
+    if (DB_PORT === 3306) {
+      console.error('Windows MySQL (port 3306):');
+      console.error('  Start-Service MySQL80_New');
+      console.error('  Set root password to "secret":');
+      console.error('    mysql -u root -p -e "ALTER USER \'root\'@\'localhost\' IDENTIFIED BY \'secret\';"');
+    } else {
+      console.error('Docker MySQL (port 3307):');
+      console.error('  docker compose -f docker-compose.db.yml up -d');
+      console.error('  docker logs cbl-mysql');
+    }
+    console.error('\nOr re-run with Docker port:');
+    console.error('  node backend/scripts/setup-local-mysql.js --port 3307');
+    throw err;
+  }
+
+  await conn.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\``);
+  console.log(`OK  Database "${DB_NAME}" ready`);
+  await conn.end();
+}
+
+console.log('Installing backend dependencies (mysql2)...');
 run('npm', ['install', '--no-fund', '--no-audit'], backendDir);
 
-const backendEnv = `NODE_ENV=development
+(async () => {
+  await testAndCreateDb();
+
+  const backendEnv = `NODE_ENV=development
 PORT=5000
 APP_NAME=CBL-Backend
 APP_URL=http://localhost:5000
 CLIENT_URL=http://localhost:5173
 
 DB_DIALECT=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_NAME=cbl_db
-DB_USER=root
-DB_PASSWORD=secret
+DB_HOST=${DB_HOST}
+DB_PORT=${DB_PORT}
+DB_NAME=${DB_NAME}
+DB_USER=${DB_USER}
+DB_PASSWORD=${DB_PASSWORD}
 DB_POOL_MIN=2
 DB_POOL_MAX=10
 DB_LOGGING=false
@@ -80,32 +132,41 @@ ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
 ENCRYPTION_KEY=cbl_local_encryption_key_32char!
 `;
 
-fs.writeFileSync(path.join(backendDir, '.env'), backendEnv, 'utf8');
-console.log('Wrote backend/.env (MySQL 127.0.0.1:3306 / password secret)');
+  fs.writeFileSync(path.join(backendDir, '.env'), backendEnv, 'utf8');
+  console.log(`Wrote backend/.env (MySQL ${DB_HOST}:${DB_PORT} / ${DB_NAME})`);
 
-const feEnv = `VITE_API_URL=/api/v1
+  const feEnv = `VITE_API_URL=/api/v1
 VITE_BYPASS_AUTH=true
 VITE_PREVIEW_EMAIL=superadmin@cblapp.com
 VITE_PREVIEW_PASSWORD=Admin@123!
-VITE_MSAL_CLIENT_ID=6ac94d07-9ab4-470f-924d-6361d471fb0e
-VITE_MSAL_TENANT_ID=90dccc47-53bf-449c-876c-c5649f21f94d
 `;
-fs.writeFileSync(path.join(rootDir, 'apps', 'management-dashboard', '.env'), feEnv, 'utf8');
-console.log('Wrote apps/management-dashboard/.env');
+  fs.writeFileSync(path.join(rootDir, 'apps', 'management-dashboard', '.env'), feEnv, 'utf8');
+  console.log('Wrote apps/management-dashboard/.env (Local Preview)');
 
-console.log('Running migrations...');
-run('npm', ['run', 'migrate'], backendDir);
-console.log('Running seeders...');
-try {
-  run('npm', ['run', 'seed'], backendDir);
-} catch (err) {
-  console.warn('Seed reported an error (often OK if data already exists):', err.message);
-}
+  console.log('Running migrations...');
+  run('npm', ['run', 'migrate'], backendDir);
+  console.log('Running seeders...');
+  try {
+    run('npm', ['run', 'seed'], backendDir);
+  } catch (err) {
+    console.warn('Seed reported an error (often OK if data already exists):', err.message);
+  }
 
-console.log('\nMySQL local setup complete.');
-console.log('Ensure Windows service MySQL80_New (or MySQL80) is Running.');
-console.log('Root password must be: secret');
-console.log('Database: cbl_db');
-console.log('Then: cd backend && npm run dev');
-console.log('And:  cd apps/management-dashboard && npm run dev');
-console.log('Login: superadmin@cblapp.com / Admin@123!');
+  if (!skipImport) {
+    console.log('Importing plant Excel data from data/imports/ ...');
+    try {
+      run('node', ['scripts/import-plant-data.js'], backendDir);
+    } catch (err) {
+      console.warn('Plant import skipped or partial:', err.message);
+    }
+  }
+
+  console.log('\nLocalhost MySQL setup complete.');
+  console.log(`  DB: ${DB_HOST}:${DB_PORT}/${DB_NAME}  user=${DB_USER}  password=${DB_PASSWORD}`);
+  console.log('  Backend:  cd backend && npm run dev');
+  console.log('  Frontend: cd apps/management-dashboard && npm run dev');
+  console.log('  Login:    superadmin@cblapp.com / Admin@123!');
+})().catch((err) => {
+  console.error(err.message || err);
+  process.exit(1);
+});

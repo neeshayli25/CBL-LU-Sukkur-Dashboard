@@ -64,13 +64,22 @@ const bootstrap = async () => {
       logger.error('');
       logger.error('────────────────────────────────────────────────────────');
       logger.error('Database rejected credentials from backend/.env');
-      logger.error('Recommended (no MySQL Workbench / Docker needed):');
-      logger.error('  From repo root:');
-      logger.error('    node backend/scripts/setup-embedded.js');
-      logger.error('  Or PowerShell:');
-      logger.error('    powershell -ExecutionPolicy Bypass -File .\\backend\\scripts\\setup-embedded.ps1');
-      logger.error('That creates backend/data/cbl.sqlite inside the project.');
-      logger.error('See WINDOWS_SETUP.md');
+      logger.error('Localhost fix (Windows):');
+      logger.error('  powershell -ExecutionPolicy Bypass -File .\\start-local.ps1');
+      logger.error('Or test connection:');
+      logger.error('  node backend/scripts/test-db-connection.js');
+      logger.error('  node backend/scripts/test-db-connection.js --port 3307');
+      logger.error('See START_HERE.md');
+      logger.error('────────────────────────────────────────────────────────');
+    } else if (/ECONNREFUSED|connect ETIMEDOUT|getaddrinfo/i.test(String(err?.message || ''))) {
+      logger.error('');
+      logger.error('────────────────────────────────────────────────────────');
+      logger.error('Cannot reach MySQL at the host/port in backend/.env');
+      logger.error('Docker (recommended): docker compose -f docker-compose.db.yml up -d');
+      logger.error('Then: node backend/scripts/setup-local-mysql.js --port 3307');
+      logger.error('Windows service: Start-Service MySQL80_New');
+      logger.error('Then: node backend/scripts/setup-local-mysql.js --port 3306');
+      logger.error('See START_HERE.md');
       logger.error('────────────────────────────────────────────────────────');
     }
     process.exit(1);
