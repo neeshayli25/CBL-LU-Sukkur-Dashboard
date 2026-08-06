@@ -1,20 +1,49 @@
-import React, { type ReactNode } from "react";
+import React, { type ReactNode, useEffect, useState } from "react";
+import { tokenStore } from "@cbl/api";
 import { useAuthStore } from "../store/authStore";
 
 interface ProtectedRouteProps {
   children: ReactNode;
   requiredRoles?: string[];
-  fallback?: ReactNode; // e.g. Redirect component to login page
+  fallback?: ReactNode;
 }
 
+/**
+ * Requires a real JWT in tokenStore — not just isAuthenticated.
+ * Prevents dashboard mounts that fire API calls without Authorization
+ * (root cause of repeated 401 "Authentication token is required").
+ */
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   requiredRoles = [],
   fallback = null,
 }) => {
-  const { isAuthenticated, hasRole } = useAuthStore();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const hasRole = useAuthStore((s) => s.hasRole);
+  const clearAuth = useAuthStore((s) => s.clearAuth);
+  const hydrateFromTokenStore = useAuthStore((s) => s.hydrateFromTokenStore);
+  const [ready, setReady] = useState(false);
+  const [allowed, setAllowed] = useState(false);
 
-  if (!isAuthenticated) {
+  useEffect(() => {
+    hydrateFromTokenStore();
+    const hasToken = Boolean(tokenStore.getAccessToken());
+    const authed = useAuthStore.getState().isAuthenticated;
+
+    if (!hasToken) {
+      if (authed) clearAuth();
+      setAllowed(false);
+    } else if (!authed) {
+      setAllowed(false);
+    } else {
+      setAllowed(true);
+    }
+    setReady(true);
+  }, [isAuthenticated, clearAuth, hydrateFromTokenStore]);
+
+  if (!ready) return null;
+
+  if (!allowed) {
     return <>{fallback}</>;
   }
 
