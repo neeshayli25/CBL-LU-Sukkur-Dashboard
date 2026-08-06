@@ -63,7 +63,19 @@ curl http://localhost:5000/api/health
 
 ---
 
-## “Too many requests. Please slow down.”
+## Why you saw “Authentication token is required” (401)
+
+Root cause: the UI was treated as logged in **without** sending a JWT
+`Authorization: Bearer …` header. Backend middleware then rejects every
+`/log-sheets/*` call with `Authentication token is required`.
+
+Common triggers:
+1. Old preview mode that used a fake “UI Preview User” (avatar **UP**) with no token
+2. In-memory token lost after Vite hot reload / tab refresh while the page stayed open
+3. Backend not running → login never issued a token
+
+Current `main` + auth fix: Local Preview always password-logs into the API,
+tokens are stored in `sessionStorage`, and protected routes require a real token.
 
 Restart the backend (`Ctrl+C` then `npm run dev`).  
 On current code, rate limits are skipped when `NODE_ENV=development`.
