@@ -41,7 +41,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     setReady(true);
   }, [isAuthenticated, clearAuth, hydrateFromTokenStore]);
 
-  if (!ready) return null;
+  if (!ready) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-sm text-[#6B7280]">
+        Checking session…
+      </div>
+    );
+  }
 
   if (!allowed) {
     return <>{fallback}</>;

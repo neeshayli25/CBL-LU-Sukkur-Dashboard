@@ -1,45 +1,28 @@
 import { type Configuration, LogLevel } from "@azure/msal-browser";
 
+const clientId = import.meta.env?.VITE_MSAL_CLIENT_ID || "";
+const tenantId = import.meta.env?.VITE_MSAL_TENANT_ID || "";
+
 export const msalConfig: Configuration = {
   auth: {
-    clientId: import.meta.env?.VITE_MSAL_CLIENT_ID || "PLACEHOLDER_CLIENT_ID",
-    authority: `https://login.microsoftonline.com/${
-      import.meta.env?.VITE_MSAL_TENANT_ID || "PLACEHOLDER_TENANT_ID"
-    }`,
-    redirectUri: "/",
-    postLogoutRedirectUri: "/",
+    // Empty string crashes less loudly than "PLACEHOLDER_*" GUID parse errors;
+    // AuthProvider still initializes and surfaces a banner if IDs are missing.
+    clientId: clientId || "00000000-0000-0000-0000-000000000000",
+    authority: `https://login.microsoftonline.com/${tenantId || "common"}`,
+    redirectUri: typeof window !== "undefined" ? window.location.origin : "http://localhost:5173",
+    postLogoutRedirectUri: typeof window !== "undefined" ? window.location.origin : "http://localhost:5173",
     navigateToLoginRequestUrl: true,
   },
   cache: {
-    cacheLocation: "sessionStorage", // This configures where your cache will be stored
-    storeAuthStateInCookie: false, // Set this to "true" if you are having issues on IE11 or Edge
+    cacheLocation: "sessionStorage",
+    storeAuthStateInCookie: false,
   },
   system: {
     loggerOptions: {
-      loggerCallback: (
-        level: LogLevel,
-        message: string,
-        containsPii: boolean
-      ) => {
-        if (containsPii) {
-          return;
-        }
-        switch (level) {
-          case LogLevel.Error:
-            console.error(message);
-            return;
-          case LogLevel.Info:
-            console.info(message);
-            return;
-          case LogLevel.Verbose:
-            console.debug(message);
-            return;
-          case LogLevel.Warning:
-            console.warn(message);
-            return;
-          default:
-            return;
-        }
+      loggerCallback: (level: LogLevel, message: string, containsPii: boolean) => {
+        if (containsPii) return;
+        if (level === LogLevel.Error) console.error(message);
+        if (level === LogLevel.Warning) console.warn(message);
       },
     },
   },

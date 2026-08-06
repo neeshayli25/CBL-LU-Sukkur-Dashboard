@@ -197,7 +197,17 @@ Switch back to `false` when Entra IDs are ready.
 
 ---
 
-## Part G — Smooth backend + database checklist (after SSO works)
+### Blank white screen after enabling SSO
+
+Cause: MSAL Browser v5 must call `initialize()` before login. Older code skipped that and React crashed.
+
+Fix is on `main` (AuthProvider initializes MSAL). After `git pull`:
+1. Hard refresh the browser (Ctrl+Shift+R)
+2. Open only **http://localhost:5173**
+3. Confirm `.env` has real Client ID + Tenant ID and `VITE_BYPASS_AUTH=false`
+4. Restart Vite after any `.env` change
+
+If it still blanks, open DevTools (F12) → Console and send the red error text.
 
 1. **One database only** — prefer embedded SQLite for local Windows:
    - `backend/.env` has `DB_DIALECT=sqlite`
