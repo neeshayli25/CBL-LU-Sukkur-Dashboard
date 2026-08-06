@@ -84,8 +84,8 @@ VITE_API_URL=/api/v1
 VITE_BYPASS_AUTH=true
 VITE_PREVIEW_EMAIL=superadmin@cblapp.com
 VITE_PREVIEW_PASSWORD=Admin@123!
-VITE_MSAL_CLIENT_ID=your_entra_app_client_id
-VITE_MSAL_TENANT_ID=your_entra_tenant_id
+VITE_MSAL_CLIENT_ID=6ac94d07-9ab4-470f-924d-6361d471fb0e
+VITE_MSAL_TENANT_ID=90dccc47-53bf-449c-876c-c5649f21f94d
 "@
 Set-Content -Path $feEnv -Value $feText -Encoding UTF8
 Write-Host "==> Wrote $feEnv" -ForegroundColor Green

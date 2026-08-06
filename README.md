@@ -125,7 +125,7 @@ Open `http://localhost:5173`.
 
 > Vite must bind `0.0.0.0` (already set in `apps/management-dashboard` via `vite --host 0.0.0.0`).
 
-**Preview-only UI:** `VITE_BYPASS_AUTH=true` renders a fake identity with **no JWT**. Backend calls return 401 — expected. Never enable bypass in production.
+**Preview login:** `VITE_BYPASS_AUTH=true` signs in as seeded superadmin with a **real JWT** against the local API. Use this until Microsoft SSO is configured (`VITE_BYPASS_AUTH=false` + Entra IDs + user in DB). See `START_HERE.md`.
 
 ---
 
