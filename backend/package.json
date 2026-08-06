@@ -11,6 +11,7 @@
     "seed": "npx sequelize-cli db:seed:all",
     "seed:umzug": "node scripts/seed.js",
     "setup:embedded": "node scripts/setup-embedded.js",
+    "setup:mysql": "node scripts/setup-local-mysql.js",
     "db:embedded": "node scripts/bootstrap-embedded-db.js",
     "user:sso": "node scripts/add-sso-user.js",
     "migrate:undo": "npx sequelize-cli db:migrate:undo",
@@ -66,7 +67,6 @@
     "sequelize-cli": "^6.6.2",
     "sharp": "^0.33.4",
     "socket.io": "^4.7.5",
-    "sqlite3": "^6.0.1",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
     "umzug": "^3.8.1",
@@ -75,6 +75,9 @@
     "winston-daily-rotate-file": "^5.0.0",
     "xlsx": "^0.18.5",
     "xss-clean": "^0.1.4"
+  },
+  "optionalDependencies": {
+    "sqlite3": "^6.0.1"
   },
   "devDependencies": {
     "@faker-js/faker": "^8.4.1",
