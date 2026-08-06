@@ -12,6 +12,9 @@ const handler = (req, res) => {
   );
 };
 
+/** Local preview / failed login retries trip production caps quickly. */
+const skipInNonProduction = () => config.env !== 'production';
+
 /**
  * Global rate limiter — applied to all routes.
  */
@@ -21,11 +24,12 @@ const globalRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   handler,
+  skip: skipInNonProduction,
 });
 
 /**
  * Strict rate limiter for authentication endpoints.
- * 10 attempts per 15 minutes.
+ * 10 attempts per 15 minutes in production.
  */
 const authRateLimiter = rateLimit({
   windowMs: config.rateLimiter.windowMs,
@@ -34,6 +38,7 @@ const authRateLimiter = rateLimit({
   legacyHeaders: false,
   handler,
   skipSuccessfulRequests: true, // Only count failed attempts
+  skip: skipInNonProduction,
 });
 
 /**
@@ -47,6 +52,7 @@ const userRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   handler,
+  skip: skipInNonProduction,
 });
 
 module.exports = { globalRateLimiter, authRateLimiter, userRateLimiter };

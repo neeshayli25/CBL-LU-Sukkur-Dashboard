@@ -29,6 +29,11 @@ storage/*
 cache/*
 !cache/.gitkeep
 
+# Embedded SQLite (created by setup-embedded)
+backend/data/*.sqlite
+backend/data/*.sqlite-*
+!backend/data/.gitkeep
+
 # ─── OS ─────────────────────────────────────
 .DS_Store
 Thumbs.db

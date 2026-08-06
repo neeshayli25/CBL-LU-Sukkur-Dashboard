@@ -13,37 +13,59 @@ const getEndpoint = (schemaId: string): string => {
   return `/log-sheets/${schemaId}`;
 };
 
+const toApiError = (err: any, fallback: string): ApiResponse<any> => ({
+  success: false,
+  message: err?.response?.data?.message || err?.message || fallback,
+  data: null,
+});
+
 export const moduleService = {
   getAll: async (schemaId: string, params?: Record<string, unknown>): Promise<ApiResponse<any[]>> => {
-    const endpoint = getEndpoint(schemaId);
-    const response = await apiClient.get(endpoint, {
-      params: { limit: 5000, ...(params || {}) },
-    });
-    const payload = response.data;
-    return {
-      success: payload?.success !== false,
-      message: payload?.message || 'Records loaded successfully.',
-      data: Array.isArray(payload?.data) ? payload.data : payload?.data?.rows || [],
-      meta: payload?.meta || payload?.data?.meta,
-    };
+    try {
+      const endpoint = getEndpoint(schemaId);
+      const response = await apiClient.get(endpoint, {
+        params: { limit: 5000, ...(params || {}) },
+      });
+      const payload = response.data;
+      return {
+        success: payload?.success !== false,
+        message: payload?.message || 'Records loaded successfully.',
+        data: Array.isArray(payload?.data) ? payload.data : payload?.data?.rows || [],
+        meta: payload?.meta || payload?.data?.meta,
+      };
+    } catch (err: any) {
+      return { ...toApiError(err, 'Failed to load records'), data: [] };
+    }
   },
 
   create: async (schemaId: string, record: any): Promise<ApiResponse<any>> => {
-    const endpoint = getEndpoint(schemaId);
-    const response = await apiClient.post(endpoint, record);
-    return response.data;
+    try {
+      const endpoint = getEndpoint(schemaId);
+      const response = await apiClient.post(endpoint, record);
+      return response.data;
+    } catch (err: any) {
+      return toApiError(err, 'Failed to create record');
+    }
   },
 
   update: async (schemaId: string, id: string, updates: any): Promise<ApiResponse<any>> => {
-    const endpoint = getEndpoint(schemaId);
-    const response = await apiClient.put(`${endpoint}/${id}`, updates);
-    return response.data;
+    try {
+      const endpoint = getEndpoint(schemaId);
+      const response = await apiClient.put(`${endpoint}/${id}`, updates);
+      return response.data;
+    } catch (err: any) {
+      return toApiError(err, 'Failed to update record');
+    }
   },
 
   delete: async (schemaId: string, id: string): Promise<ApiResponse<null>> => {
-    const endpoint = getEndpoint(schemaId);
-    const response = await apiClient.delete(`${endpoint}/${id}`);
-    return response.data;
+    try {
+      const endpoint = getEndpoint(schemaId);
+      const response = await apiClient.delete(`${endpoint}/${id}`);
+      return response.data;
+    } catch (err: any) {
+      return toApiError(err, 'Failed to delete record');
+    }
   },
 
   updateStatus: async (schemaId: string, id: string, status: string, reason?: string) => {

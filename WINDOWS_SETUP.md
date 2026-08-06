@@ -1,39 +1,78 @@
-# Windows local setup (MySQL access denied fix)
+# Local setup (Windows / macOS / Linux)
 
-The error `Access denied for user 'root'@'localhost' (using password: YES)` means
-your **Windows MySQL password does not match** `backend/.env` (`DB_PASSWORD`).
+**You do not need MySQL Workbench, Docker, or a MySQL Windows service.**
 
-## Recommended fix (Docker MySQL on port 3307)
+The recommended path stores the database **inside the project** at:
 
-1. Install/start **Docker Desktop**
-2. From the repo root in PowerShell:
+`backend/data/cbl.sqlite`
+
+---
+
+## One-time setup
+
+From the repo root in PowerShell or terminal:
 
 ```powershell
 cd C:\Users\Nisha Ali\CBL-LU-Sukkur-Dashboard
-powershell -ExecutionPolicy Bypass -File .\backend\scripts\setup-windows.ps1
+node backend\scripts\setup-embedded.js
+```
+
+Or:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\backend\scripts\setup-embedded.ps1
 ```
 
 This will:
-- start MySQL on **127.0.0.1:3307** with password **`secret`**
-- write `backend/.env` and frontend `.env`
-- run `npm run migrate` + `npm run seed`
 
-3. Run the app (two terminals):
+1. Write `backend/.env` with `DB_DIALECT=sqlite`
+2. Write frontend preview `.env` (real JWT login)
+3. Create `backend/data/cbl.sqlite`
+4. Seed superadmin + demo HSE log-sheet rows
+
+Login: `superadmin@cblapp.com` / `Admin@123!`
+
+---
+
+## Run the app (every day)
+
+Terminal 1:
 
 ```powershell
 cd backend
 npm run dev
 ```
 
+Terminal 2:
+
 ```powershell
 cd apps\management-dashboard
-npm run dev
+npm run dev -- --host 0.0.0.0
 ```
 
-4. Open http://localhost:5173 → **Sign in (Local Preview)**  
-   User: `superadmin@cblapp.com` / `Admin@123!`
+Open http://localhost:5173 → **Sign in (Local Preview)**
 
-5. (Optional) Import Excel sheets once backend is healthy:
+You should see avatar initials **SA** (Super Admin), not **UP**.  
+If you see **UP** and zeros, you are on old code or not signed in — pull latest `main` and restart both servers.
+
+Health check:
+
+```powershell
+curl http://localhost:5000/api/health
+```
+
+---
+
+## “Too many requests. Please slow down.”
+
+Restart the backend (`Ctrl+C` then `npm run dev`).  
+On current code, rate limits are skipped when `NODE_ENV=development`.
+
+---
+
+## Optional: import your plant Excel files
+
+Put Excel files under a folder and point the import scripts, or copy them to the paths expected by:
 
 ```powershell
 cd backend
@@ -41,41 +80,15 @@ node scripts\import-log-sheets.js
 node scripts\import-incident-log.js
 ```
 
-> Note: Docker MySQL uses port **3307** so it does not fight an existing Windows MySQL service on 3306.
+Demo rows are already seeded so the dashboard is non-empty after setup.
 
-## Alternative: keep your installed MySQL
+---
 
-If you prefer local MySQL (not Docker):
+## Optional: MySQL / Docker (not required)
 
-1. Open MySQL client with your real root password
-2. Run:
+Only if you explicitly want MySQL:
 
-```sql
-ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'secret';
-FLUSH PRIVILEGES;
-CREATE DATABASE IF NOT EXISTS cbl_db;
-```
+- Docker: `backend\scripts\setup-windows.ps1` (needs virtualization)
+- Local MySQL80 service: set `DB_DIALECT=mysql`, `DB_PASSWORD=secret`, then `npm run migrate && npm run seed`
 
-3. In `backend\.env` set:
-
-```env
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=secret
-DB_NAME=cbl_db
-ENCRYPTION_KEY=cbl_encryption_key_32_chars_ab
-```
-
-4. Then `npm run migrate` && `npm run seed` && `npm run dev`
-
-## Quick checks
-
-```powershell
-# Docker MySQL
-docker ps
-mysql -h 127.0.0.1 -P 3307 -u root -psecret -e "SHOW DATABASES;"
-
-# Backend health
-curl http://localhost:5000/api/health
-```
+For day-to-day work on Windows without BIOS virtualization, **stay on embedded SQLite**.

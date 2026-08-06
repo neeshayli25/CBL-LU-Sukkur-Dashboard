@@ -5,54 +5,82 @@ const redisConfig = require('../../database/config/redis');
 const logger = require('../../shared/utils/logger');
 
 let client;
+let redisDisabled = false;
 
 const getClient = () => {
+  if (redisDisabled) return null;
   if (!client) {
-    client = new IORedis(redisConfig);
-    client.on('connect', () => logger.info('✅ Redis connected'));
-    client.on('error', (err) => logger.error('Redis error:', err));
+    try {
+      client = new IORedis({
+        ...redisConfig,
+        maxRetriesPerRequest: 1,
+        enableOfflineQueue: false,
+        lazyConnect: true,
+      });
+      client.on('connect', () => logger.info('✅ Redis connected'));
+      client.on('error', (err) => {
+        logger.warn(`Redis unavailable (continuing without cache): ${err.message}`);
+        redisDisabled = true;
+      });
+    } catch (err) {
+      logger.warn(`Redis init failed (continuing without cache): ${err.message}`);
+      redisDisabled = true;
+      return null;
+    }
   }
   return client;
 };
 
 class CacheService {
-  /**
-   * Get a cached value by key.
-   * @returns {any} Parsed JSON value or null
-   */
   async get(key) {
-    const value = await getClient().get(key);
-    return value ? JSON.parse(value) : null;
+    try {
+      const c = getClient();
+      if (!c) return null;
+      if (c.status !== 'ready') {
+        await c.connect().catch(() => {
+          redisDisabled = true;
+        });
+      }
+      if (redisDisabled) return null;
+      const value = await c.get(key);
+      return value ? JSON.parse(value) : null;
+    } catch {
+      redisDisabled = true;
+      return null;
+    }
   }
 
-  /**
-   * Set a cached value with optional TTL.
-   * @param {string} key
-   * @param {any} value
-   * @param {number} ttlSeconds - Default 300 (5 min)
-   */
   async set(key, value, ttlSeconds = 300) {
-    await getClient().set(key, JSON.stringify(value), 'EX', ttlSeconds);
+    try {
+      const c = getClient();
+      if (!c || redisDisabled) return;
+      await c.set(key, JSON.stringify(value), 'EX', ttlSeconds);
+    } catch {
+      redisDisabled = true;
+    }
   }
 
-  /**
-   * Delete a cached key.
-   */
   async del(key) {
-    await getClient().del(key);
+    try {
+      const c = getClient();
+      if (!c || redisDisabled) return;
+      await c.del(key);
+    } catch {
+      redisDisabled = true;
+    }
   }
 
-  /**
-   * Delete all keys matching a pattern.
-   */
   async delPattern(pattern) {
-    const keys = await getClient().keys(pattern);
-    if (keys.length > 0) await getClient().del(keys);
+    try {
+      const c = getClient();
+      if (!c || redisDisabled) return;
+      const keys = await c.keys(pattern);
+      if (keys.length > 0) await c.del(keys);
+    } catch {
+      redisDisabled = true;
+    }
   }
 
-  /**
-   * Wrap a function with cache-aside pattern.
-   */
   async remember(key, ttl, fn) {
     const cached = await this.get(key);
     if (cached !== null) return cached;

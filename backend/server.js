@@ -48,7 +48,7 @@ process.on('unhandledRejection', (reason) => {
 const bootstrap = async () => {
   try {
     await sequelize.authenticate();
-    logger.info('✅ MySQL connected successfully');
+    logger.info(`✅ Database connected (${process.env.DB_DIALECT || 'mysql'})`);
 
     server.listen(PORT, '0.0.0.0', () => {
       logger.info(`🚀 Server running on port ${PORT} [${config.env}]`);
@@ -63,13 +63,14 @@ const bootstrap = async () => {
     if (err?.name === 'SequelizeAccessDeniedError' || /Access denied for user/i.test(String(err?.message || ''))) {
       logger.error('');
       logger.error('────────────────────────────────────────────────────────');
-      logger.error('MySQL rejected DB_USER/DB_PASSWORD from backend/.env');
-      logger.error('Windows fix (recommended):');
-      logger.error('  1) Start Docker Desktop');
-      logger.error('  2) From repo root run:');
-      logger.error('     powershell -ExecutionPolicy Bypass -File .\\backend\\scripts\\setup-windows.ps1');
-      logger.error('  That starts MySQL on port 3307 with password "secret" and writes .env');
-      logger.error('See WINDOWS_SETUP.md for details.');
+      logger.error('Database rejected credentials from backend/.env');
+      logger.error('Recommended (no MySQL Workbench / Docker needed):');
+      logger.error('  From repo root:');
+      logger.error('    node backend/scripts/setup-embedded.js');
+      logger.error('  Or PowerShell:');
+      logger.error('    powershell -ExecutionPolicy Bypass -File .\\backend\\scripts\\setup-embedded.ps1');
+      logger.error('That creates backend/data/cbl.sqlite inside the project.');
+      logger.error('See WINDOWS_SETUP.md');
       logger.error('────────────────────────────────────────────────────────');
     }
     process.exit(1);
