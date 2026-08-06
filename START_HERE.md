@@ -36,6 +36,15 @@ git fetch --prune
 powershell -ExecutionPolicy Bypass -File .\start-local.ps1
 ```
 
+If you see `Please install sqlite3 package manually`, run this once then retry:
+
+```powershell
+cd backend
+npm install
+cd ..
+powershell -ExecutionPolicy Bypass -File .\start-local.ps1
+```
+
 Or manually:
 
 ```powershell
