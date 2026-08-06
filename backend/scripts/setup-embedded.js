@@ -17,6 +17,23 @@ const rootDir = path.join(backendDir, '..');
 const dataDir = path.join(backendDir, 'data');
 fs.mkdirSync(dataDir, { recursive: true });
 
+function runNpm(args, cwd) {
+  const cmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  const result = spawnSync(cmd, args, { cwd, stdio: 'inherit', shell: process.platform === 'win32' });
+  if (result.status !== 0) {
+    throw new Error(`npm ${args.join(' ')} failed with code ${result.status}`);
+  }
+}
+
+// Ensure sqlite3 (and other deps) are installed before Sequelize boots
+const sqlitePkg = path.join(backendDir, 'node_modules', 'sqlite3');
+if (!fs.existsSync(sqlitePkg)) {
+  console.log('Installing backend dependencies (includes sqlite3)...');
+  runNpm(['install', '--no-fund', '--no-audit'], backendDir);
+} else {
+  console.log('Backend dependencies already present');
+}
+
 const sqlitePath = path.join(dataDir, 'cbl.sqlite').replace(/\\/g, '/');
 
 const backendEnv = `NODE_ENV=development
@@ -72,7 +89,7 @@ fs.writeFileSync(path.join(backendDir, '.env'), backendEnv, 'utf8');
 console.log('Wrote backend/.env (embedded SQLite)');
 
 const feEnv = `VITE_API_URL=/api/v1
-# true = Local Preview (password → real JWT) — use this until SSO user is seeded
+# true = Local Preview (password -> real JWT) - use this until SSO user is seeded
 VITE_BYPASS_AUTH=true
 VITE_PREVIEW_EMAIL=superadmin@cblapp.com
 VITE_PREVIEW_PASSWORD=Admin@123!
@@ -95,6 +112,6 @@ if (result.status !== 0) {
 
 console.log('\nSetup complete.');
 console.log('  cd backend && npm run dev');
-console.log('  cd apps/management-dashboard && npm run dev -- --host 0.0.0.0');
+console.log('  cd apps/management-dashboard && npm run dev');
 console.log('Login: superadmin@cblapp.com / Admin@123!');
 console.log(`DB file: ${sqlitePath}`);

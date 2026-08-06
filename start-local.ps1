@@ -4,9 +4,10 @@
   One-command local run for CBL HSE on Windows.
 
 .DESCRIPTION
-  1) Ensures embedded SQLite DB + .env files exist
-  2) Starts backend (port 5000) in a new window
-  3) Starts frontend (port 5173) in a new window
+  1) Ensures backend deps (sqlite3) are installed
+  2) Ensures embedded SQLite DB + .env files exist
+  3) Starts backend (port 5000) in a new window
+  4) Starts frontend (port 5173) in a new window
 
   Login: Sign in (Local Preview)
   User:  superadmin@cblapp.com
@@ -28,18 +29,34 @@ if (-not (Test-Path (Join-Path $Root "backend\package.json"))) {
 Set-Location $Root
 Write-Host "==> Repo: $Root" -ForegroundColor Cyan
 
-$sqlite = Join-Path $Root "backend\data\cbl.sqlite"
-$backendEnv = Join-Path $Root "backend\.env"
+$Backend = Join-Path $Root "backend"
+$sqlite3Dir = Join-Path $Backend "node_modules\sqlite3"
+if (-not (Test-Path $sqlite3Dir)) {
+  Write-Host "==> Installing backend dependencies (sqlite3)..." -ForegroundColor Cyan
+  Push-Location $Backend
+  npm install --no-fund --no-audit
+  if ($LASTEXITCODE -ne 0) {
+    Pop-Location
+    Write-Host "npm install failed in backend/" -ForegroundColor Red
+    exit 1
+  }
+  Pop-Location
+} else {
+  Write-Host "==> Backend dependencies OK" -ForegroundColor Green
+}
+
+$sqlite = Join-Path $Backend "data\cbl.sqlite"
+$backendEnv = Join-Path $Backend ".env"
 if (-not (Test-Path $sqlite) -or -not (Test-Path $backendEnv)) {
   Write-Host "==> First-time setup (embedded database)..." -ForegroundColor Cyan
-  node (Join-Path $Root "backend\scripts\setup-embedded.js")
+  node (Join-Path $Backend "scripts\setup-embedded.js")
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 } else {
   Write-Host "==> Embedded DB already present" -ForegroundColor Green
 }
 
 Write-Host "==> Starting backend on :5000 ..." -ForegroundColor Cyan
-Start-Process powershell -WorkingDirectory (Join-Path $Root "backend") -ArgumentList "-NoExit","-Command","npm run dev"
+Start-Process powershell -WorkingDirectory $Backend -ArgumentList "-NoExit","-Command","npm run dev"
 
 Start-Sleep -Seconds 3
 
