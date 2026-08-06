@@ -96,7 +96,7 @@ export const useAuth = () => {
       }
 
       const loginResponse = await instance.loginPopup({
-        scopes: ["user.read"],
+        scopes: ["User.Read"],
       });
 
       const email = loginResponse.account?.username;
