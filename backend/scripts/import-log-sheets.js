@@ -18,42 +18,49 @@ const BASE = process.argv.includes('--base')
 const EMAIL = process.env.IMPORT_EMAIL || 'superadmin@cblapp.com';
 const PASSWORD = process.env.IMPORT_PASSWORD || 'Admin@123!';
 
-const UPLOADS = '/home/ubuntu/.cursor/projects/workspace/uploads';
+const rootDir = path.join(__dirname, '..', '..');
+const defaultImports = path.join(rootDir, 'data', 'imports');
+const legacyUploads = '/home/ubuntu/.cursor/projects/workspace/uploads';
+
+const importsArg = process.argv.includes('--imports-dir')
+  ? process.argv[process.argv.indexOf('--imports-dir') + 1]
+  : process.env.IMPORTS_DIR
+    || (fs.existsSync(defaultImports) ? defaultImports : legacyUploads);
 
 const JOBS = [
   {
     module: 'hazard-reporting',
-    file: path.join(UPLOADS, 'Hazard_Log_Sheet_YTD-June-2026_ab87.xlsx'),
+    file: path.join(importsArg, 'Hazard_Log_Sheet_YTD-June-2026_ab87.xlsx'),
     sheetName: 'Hazard Spotting 2026',
     headerRowIndex: 1,
   },
   {
     module: 'near-miss',
-    file: path.join(UPLOADS, 'Hazard_Log_Sheet_YTD-June-2026_ab87.xlsx'),
+    file: path.join(importsArg, 'Hazard_Log_Sheet_YTD-June-2026_ab87.xlsx'),
     sheetName: 'Near Miss',
     headerRowIndex: 1,
   },
   {
     module: 'action-tracker',
-    file: path.join(UPLOADS, 'Action_Tracker-_June__-_26_-_Copy_5e9c.xlsx'),
+    file: path.join(importsArg, 'Action_Tracker-_June__-_26_-_Copy_5e9c.xlsx'),
     sheetName: 'EHS Tracker',
     headerRowIndex: 1,
   },
   {
     module: 'training-records',
-    file: path.join(UPLOADS, 'Departmental_Training_Log_YTD-June-2026_9bdb.xlsx'),
+    file: path.join(importsArg, 'Departmental_Training_Log_YTD-June-2026_9bdb.xlsx'),
     sheets: ['January', 'February', 'March', 'April', 'MAY', 'June'],
     headerRowIndex: 0,
   },
   {
     module: 'critical-audit-plan',
-    file: path.join(UPLOADS, 'DCS_Required_For_PRJ_6262.xlsx'),
+    file: path.join(importsArg, 'DCS_Required_For_PRJ_6262.xlsx'),
     sheetName: 'Critical Audit Plan',
     headerRowIndex: 1,
   },
   {
     module: 'incident-log',
-    file: path.join(UPLOADS, 'Incident_Log_YTD-June-26_6a83.xlsx'),
+    file: path.join(importsArg, 'Incident_Log_YTD-June-26_6a83.xlsx'),
     sheetName: 'Incidents Log YTD-JAN-2026',
     headerRowIndex: 0,
   },

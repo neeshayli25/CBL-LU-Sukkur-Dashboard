@@ -14,6 +14,17 @@ const sharedDefine = {
   paranoid: true,
 };
 
+const mysqlSslOptions = config.db.ssl
+  ? {
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false,
+      },
+    },
+  }
+  : {};
+
 const mysqlBase = {
   username: config.db.user,
   password: config.db.password,
@@ -22,6 +33,7 @@ const mysqlBase = {
   port: config.db.port,
   dialect: 'mysql',
   define: sharedDefine,
+  ...mysqlSslOptions,
 };
 
 const sqliteBase = {
@@ -66,12 +78,6 @@ module.exports = {
         max: config.db.poolMax,
         acquire: 60000,
         idle: 20000,
-      },
-      dialectOptions: {
-        ssl: {
-          require: true,
-          rejectUnauthorized: false,
-        },
       },
     },
 };

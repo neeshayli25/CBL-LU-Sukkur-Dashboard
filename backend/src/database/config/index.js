@@ -18,6 +18,7 @@ const envSchema = Joi.object({
   DB_NAME: Joi.string().when('DB_DIALECT', { is: 'sqlite', then: Joi.optional().default('cbl_db'), otherwise: Joi.required() }),
   DB_USER: Joi.string().when('DB_DIALECT', { is: 'sqlite', then: Joi.optional().default('root'), otherwise: Joi.required() }),
   DB_PASSWORD: Joi.string().allow('').default(''),
+  DB_SSL: Joi.string().valid('true', 'false').default('false'),
 
   JWT_ACCESS_SECRET: Joi.string().min(16).required(),
   JWT_REFRESH_SECRET: Joi.string().min(16).required(),
@@ -65,6 +66,7 @@ const config = Object.freeze({
     password: envVars.DB_PASSWORD,
     poolMin: parseInt(envVars.DB_POOL_MIN, 10) || 2,
     poolMax: parseInt(envVars.DB_POOL_MAX, 10) || 10,
+    ssl: envVars.DB_SSL === 'true',
   },
 
   jwt: {

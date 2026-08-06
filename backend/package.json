@@ -12,6 +12,8 @@
     "seed:umzug": "node scripts/seed.js",
     "setup:embedded": "node scripts/setup-embedded.js",
     "setup:mysql": "node scripts/setup-local-mysql.js",
+    "setup:cloud": "node scripts/setup-cloud-mysql.js",
+    "import:plant": "node scripts/import-plant-data.js",
     "db:embedded": "node scripts/bootstrap-embedded-db.js",
     "user:sso": "node scripts/add-sso-user.js",
     "migrate:undo": "npx sequelize-cli db:migrate:undo",

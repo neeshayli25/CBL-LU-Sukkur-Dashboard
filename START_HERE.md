@@ -1,60 +1,85 @@
-# START HERE - runnable on Windows
+# START HERE — Preview / Presentation (cloud database)
 
-Use branch **main** only.
-
-On Windows we use your **installed MySQL** (service `MySQL80_New`).
-We do **not** use sqlite3 (it needs Visual Studio C++ to compile).
-We do **not** need MySQL Workbench for day-to-day work.
+**Goal:** Show the HSE dashboard with your real plant Excel data.  
+**No local MySQL.** **No Microsoft SSO.** Just preview login.
 
 ---
 
-## One-time: confirm MySQL password + database
+## Step 1 — Get a free cloud MySQL database
 
-You already did this earlier. If unsure, run:
+Pick any MySQL 8 host (all work the same way):
 
-```powershell
-& "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root -p
-```
+| Provider | Notes |
+|----------|-------|
+| [Railway](https://railway.app) | New project → Add MySQL → copy connection vars |
+| [Aiven](https://aiven.io) | Free trial MySQL |
+| [db4free.net](https://db4free.net) | Free, good for demos |
 
-Password: `secret`
+You need these 5 values:
 
-Then:
+- **Host** (e.g. `xxx.railway.app`)
+- **Port** (usually `3306`)
+- **Database name** (create `cbl_db` or use the default they give you)
+- **Username**
+- **Password**
 
-```sql
-CREATE DATABASE IF NOT EXISTS cbl_db;
-ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'secret';
-FLUSH PRIVILEGES;
-EXIT;
-```
-
-Start the service if needed:
-
-```powershell
-Start-Service MySQL80_New
-Get-Service *mysql*
-```
+Most cloud hosts require **SSL** — set `DB_SSL=true`.
 
 ---
 
-## Run the app
+## Step 2 — Save credentials
+
+Copy the example file and fill in your values:
 
 ```powershell
 cd "C:\Users\Nisha Ali\CBL-LU-Sukkur-Dashboard"
+copy backend\.env.cloud.example backend\.env.cloud
+notepad backend\.env.cloud
+```
+
+Example:
+
+```env
+DB_HOST=your-host.railway.app
+DB_PORT=3306
+DB_NAME=cbl_db
+DB_USER=root
+DB_PASSWORD=your_password_here
+DB_SSL=true
+```
+
+---
+
+## Step 3 — Run the app
+
+```powershell
 git pull origin main
-powershell -ExecutionPolicy Bypass -File .\start-local.ps1
+powershell -ExecutionPolicy Bypass -File .\start-preview.ps1
 ```
 
 This will:
-1. Start MySQL service if needed
-2. `npm install` (root - fixes missing vite)
-3. Configure backend for MySQL `127.0.0.1:3306` / `secret` / `cbl_db`
-4. Migrate + seed
-5. Open backend + frontend windows
+1. Connect to your **cloud MySQL** (not local)
+2. Create tables + seed superadmin user
+3. Import all plant Excel files from `data/imports/`
+4. Start backend + frontend
 
-Then open **http://localhost:5173**  
-**Sign in (Local Preview)**  
-`superadmin@cblapp.com` / `Admin@123!`  
-Avatar must be **SA**.
+---
+
+## Step 4 — Login
+
+Open **http://localhost:5173**
+
+- Click **Sign in (Local Preview)**
+- Email: `superadmin@cblapp.com`
+- Password: `Admin@123!`
+- Avatar must show **SA**
+
+You should see data in:
+- Hazard Reporting, Near Miss, Incident Log
+- Action Tracker, Training Records, Critical Audit Plan
+- Dashboard KPIs
+
+You can **add new log entries** in each section — they save to the cloud database.
 
 ---
 
@@ -64,8 +89,9 @@ Avatar must be **SA**.
 cd "C:\Users\Nisha Ali\CBL-LU-Sukkur-Dashboard"
 npm install
 
+node backend\scripts\setup-cloud-mysql.js
+
 cd backend
-node scripts\setup-local-mysql.js
 npm run dev
 ```
 
@@ -76,38 +102,54 @@ cd "C:\Users\Nisha Ali\CBL-LU-Sukkur-Dashboard\apps\management-dashboard"
 npm run dev
 ```
 
+Ensure `apps\management-dashboard\.env` has:
+
+```env
+VITE_BYPASS_AUTH=true
+VITE_PREVIEW_EMAIL=superadmin@cblapp.com
+VITE_PREVIEW_PASSWORD=Admin@123!
+```
+
 ---
 
-## Why sqlite3 failed
+## Re-import plant Excel data
 
-`Please install sqlite3` / `node-gyp` / Visual Studio errors mean Windows tried to compile a native module. That needs "Desktop development with C++". We switched Windows to **MySQL + mysql2** (pure JS driver, already in the project) so you do not need Visual Studio.
-
----
-
-## Microsoft SSO (optional, after Local Preview works)
+If you need to reload all files from scratch:
 
 ```powershell
 cd backend
-node scripts\add-sso-user.js "YOUR_MICROSOFT_EMAIL" "Nisha" "Ali" super_admin
+node scripts\import-plant-data.js --force
 ```
 
-Set in `apps\management-dashboard\.env`:
-
-```env
-VITE_BYPASS_AUTH=false
-VITE_MSAL_CLIENT_ID=6ac94d07-9ab4-470f-924d-6361d471fb0e
-VITE_MSAL_TENANT_ID=90dccc47-53bf-449c-876c-c5649f21f94d
-```
-
-Restart frontend. Open **http://localhost:5173** only.
+Excel files live in `data/imports/` (already in the repo).
 
 ---
 
-## Checklist
+## Troubleshooting
 
-| Check | Expected |
-|-------|----------|
-| `Get-Service *mysql*` | MySQL80_New Running |
-| `curl http://localhost:5000/api/health` | healthy |
-| Login avatar | **SA** not UP |
-| Network tab on /log-sheets | `Authorization: Bearer ...` |
+| Problem | Fix |
+|---------|-----|
+| `Cloud MySQL credentials missing` | Create `backend/.env.cloud` from the example |
+| `ECONNREFUSED` / timeout | Check host, port, firewall; allow your IP on cloud DB |
+| SSL error | Set `DB_SSL=true` in `.env.cloud` |
+| Empty tables / zeros | Run `node backend\scripts\import-plant-data.js --force` |
+| Avatar **UP** | Set `VITE_BYPASS_AUTH=true`, restart frontend |
+| `401` on API | Use Local Preview login (gets real JWT) |
+
+---
+
+## Plant data files (bundled in repo)
+
+| File | Module |
+|------|--------|
+| `Hazard_Log_Sheet_YTD-June-2026_ab87.xlsx` | Hazard + Near Miss |
+| `Action_Tracker-_June__-_26_-_Copy_5e9c.xlsx` | Action Tracker |
+| `Departmental_Training_Log_YTD-June-2026_9bdb.xlsx` | Training Records |
+| `DCS_Required_For_PRJ_6262.xlsx` | Critical Audit Plan |
+| `Incident_Log_YTD-June-26_6a83.xlsx` | Incident Log |
+
+---
+
+## Microsoft SSO
+
+Skip for now. Come back to it only after preview works.
