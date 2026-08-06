@@ -1,159 +1,113 @@
-# START HERE — make the app runnable (Windows)
+# START HERE - runnable on Windows
 
-Only use branch **`main`**. Do not open MySQL Workbench.
+Use branch **main** only.
 
----
-
-## What was going wrong (summary)
-
-| Symptom | Real cause |
-|---------|------------|
-| Dashboard all zeros + avatar **UP** | UI “logged in” with **no JWT** → API 401 |
-| MySQL Access Denied / Workbench | Local MySQL password / PATH — **not needed anymore** |
-| Blank white page after Microsoft SSO | MSAL not initialized (fixed on `main`) |
-| Many `cursor/*` branches | Agent leftovers — **deleted**; only `main` remains |
-| Microsoft “User not authorized” | Your Entra email not in the `users` table yet |
+On Windows we use your **installed MySQL** (service `MySQL80_New`).
+We do **not** use sqlite3 (it needs Visual Studio C++ to compile).
+We do **not** need MySQL Workbench for day-to-day work.
 
 ---
 
-## Path A — Run the app now (recommended)
+## One-time: confirm MySQL password + database
 
-Uses project database: `backend/data/cbl.sqlite`  
-Login: **Local Preview** (real JWT, works offline from Microsoft).
+You already did this earlier. If unsure, run:
 
-### 1) Pull latest
+```powershell
+& "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root -p
+```
+
+Password: `secret`
+
+Then:
+
+```sql
+CREATE DATABASE IF NOT EXISTS cbl_db;
+ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'secret';
+FLUSH PRIVILEGES;
+EXIT;
+```
+
+Start the service if needed:
+
+```powershell
+Start-Service MySQL80_New
+Get-Service *mysql*
+```
+
+---
+
+## Run the app
 
 ```powershell
 cd "C:\Users\Nisha Ali\CBL-LU-Sukkur-Dashboard"
-git checkout main
 git pull origin main
-git fetch --prune
-```
-
-### 2) One-time setup + start
-
-```powershell
 powershell -ExecutionPolicy Bypass -File .\start-local.ps1
 ```
 
-If you see `Please install sqlite3 package manually`, run this once then retry:
+This will:
+1. Start MySQL service if needed
+2. `npm install` (root - fixes missing vite)
+3. Configure backend for MySQL `127.0.0.1:3306` / `secret` / `cbl_db`
+4. Migrate + seed
+5. Open backend + frontend windows
 
-```powershell
-cd backend
-npm install
-cd ..
-powershell -ExecutionPolicy Bypass -File .\start-local.ps1
-```
-
-Or manually:
-
-```powershell
-node backend\scripts\setup-embedded.js
-
-# Terminal 1
-cd backend
-npm run dev
-
-# Terminal 2
-cd apps\management-dashboard
-npm run dev
-```
-
-### 3) Open and sign in
-
-1. Browser: **http://localhost:5173** (not `127.0.0.1`)
-2. Click **Sign in (Local Preview)**
-3. Expect avatar **SA**, non-zero KPIs
-
-Credentials:
-
-- Email: `superadmin@cblapp.com`
-- Password: `Admin@123!`
-
-### 4) Confirm it’s healthy
-
-```powershell
-curl http://localhost:5000/api/health
-```
-
-DevTools → Network → any `/api/v1/log-sheets/...` request must show:
-
-`Authorization: Bearer ...`
+Then open **http://localhost:5173**  
+**Sign in (Local Preview)**  
+`superadmin@cblapp.com` / `Admin@123!`  
+Avatar must be **SA**.
 
 ---
 
-## Path B — Microsoft SSO (after Path A works)
+## Manual start (if script fails)
 
-Your Entra app (already created):
+```powershell
+cd "C:\Users\Nisha Ali\CBL-LU-Sukkur-Dashboard"
+npm install
 
-| Field | Value |
-|-------|--------|
-| Application (client) ID | `6ac94d07-9ab4-470f-924d-6361d471fb0e` |
-| Directory (tenant) ID | `90dccc47-53bf-449c-876c-c5649f21f94d` |
-| SPA redirect | `http://localhost:5173` only (no `127.0.0.1`) |
+cd backend
+node scripts\setup-local-mysql.js
+npm run dev
+```
 
-### B1) Put IDs in frontend env
+Second terminal:
 
 ```powershell
 cd "C:\Users\Nisha Ali\CBL-LU-Sukkur-Dashboard\apps\management-dashboard"
-
-@"
-VITE_API_URL=/api/v1
-VITE_BYPASS_AUTH=false
-VITE_MSAL_CLIENT_ID=6ac94d07-9ab4-470f-924d-6361d471fb0e
-VITE_MSAL_TENANT_ID=90dccc47-53bf-449c-876c-c5649f21f94d
-"@ | Set-Content -Path .\.env -Encoding UTF8
+npm run dev
 ```
-
-Restart the frontend after changing `.env`.
-
-### B2) Add your Microsoft email to the DB
-
-In Azure → **Users** → your account → copy **User principal name**.
-
-```powershell
-cd "C:\Users\Nisha Ali\CBL-LU-Sukkur-Dashboard\backend"
-node scripts\add-sso-user.js "YOUR_MICROSOFT_EMAIL_HERE" "Nisha" "Ali" super_admin
-```
-
-### B3) Sign in
-
-Open http://localhost:5173 → **Sign in with Microsoft SSO**.
-
-If SSO fails, set `VITE_BYPASS_AUTH=true` again and use Local Preview (Path A).
-
-Full Entra details: `MICROSOFT_AUTH_SETUP.md`
 
 ---
 
-## Day-to-day checklist
+## Why sqlite3 failed
 
-1. Backend running on **5000**
-2. Frontend running on **5173**
-3. Open **localhost** (not 127.0.0.1) for Microsoft redirects
-4. Avatar **SA** (or your initials) — never **UP**
-5. Forms save → Network shows 200/201, not 401
-6. Database file stays at `backend/data/cbl.sqlite` — ignore Workbench
+`Please install sqlite3` / `node-gyp` / Visual Studio errors mean Windows tried to compile a native module. That needs "Desktop development with C++". We switched Windows to **MySQL + mysql2** (pure JS driver, already in the project) so you do not need Visual Studio.
 
-Optional Excel import:
+---
+
+## Microsoft SSO (optional, after Local Preview works)
 
 ```powershell
 cd backend
-node scripts\import-log-sheets.js
-node scripts\import-incident-log.js
+node scripts\add-sso-user.js "YOUR_MICROSOFT_EMAIL" "Nisha" "Ali" super_admin
 ```
+
+Set in `apps\management-dashboard\.env`:
+
+```env
+VITE_BYPASS_AUTH=false
+VITE_MSAL_CLIENT_ID=6ac94d07-9ab4-470f-924d-6361d471fb0e
+VITE_MSAL_TENANT_ID=90dccc47-53bf-449c-876c-c5649f21f94d
+```
+
+Restart frontend. Open **http://localhost:5173** only.
 
 ---
 
-## If something breaks
+## Checklist
 
-| Message | Fix |
-|---------|-----|
-| Authentication token is required | Sign in again (Local Preview). Restart frontend after `git pull`. |
-| Blank white page | `git pull` (MSAL fix). Hard refresh. Use localhost:5173. |
-| User not authorized | Run `add-sso-user.js` with your Microsoft email. |
-| Network Error / Failed to login | Start backend: `cd backend; npm run dev` |
-| Too many requests | Restart backend (`Ctrl+C`, then `npm run dev`) |
-| MySQL / Workbench errors | Stop using them. Run `node backend\scripts\setup-embedded.js` |
-
-Stay on **`main` only**.
+| Check | Expected |
+|-------|----------|
+| `Get-Service *mysql*` | MySQL80_New Running |
+| `curl http://localhost:5000/api/health` | healthy |
+| Login avatar | **SA** not UP |
+| Network tab on /log-sheets | `Authorization: Bearer ...` |
