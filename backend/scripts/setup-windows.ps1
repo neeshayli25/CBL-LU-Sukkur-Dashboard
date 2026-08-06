@@ -101,7 +101,7 @@ AUTH_RATE_LIMIT_MAX=10
 LOG_LEVEL=info
 LOG_DIR=logs
 ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
-ENCRYPTION_KEY=cbl_encryption_key_32_chars_ab
+ENCRYPTION_KEY=cbl_local_encryption_key_32char!
 "@
 
 Set-Content -Path $backendEnv -Value $envText -Encoding UTF8

@@ -20,7 +20,8 @@ module.exports = {
     const [roles] = await sequelize.query(
       `SELECT id, name FROM roles WHERE name IN ('${ROLES.SUPER_ADMIN}', '${ROLES.ADMIN}', '${ROLES.MANAGER}', '${ROLES.USER}')`,
     );
-    const [permissions] = await sequelize.query('SELECT id, `key` FROM permissions');
+    const keyCol = queryInterface.quoteIdentifier('key');
+    const [permissions] = await sequelize.query(`SELECT id, ${keyCol} FROM permissions`);
 
     if (!roles.length || !permissions.length) {
       throw new Error('Roles or permissions missing. Run 01-roles and 02-permissions seeders first.');

@@ -11,10 +11,12 @@ const envSchema = Joi.object({
   APP_URL: Joi.string().uri().default('http://localhost:5000'),
   CLIENT_URL: Joi.string().uri().default('http://localhost:3000'),
 
-  DB_HOST: Joi.string().required(),
+  DB_DIALECT: Joi.string().valid('mysql', 'sqlite').default('mysql'),
+  DB_STORAGE: Joi.string().optional(),
+  DB_HOST: Joi.string().when('DB_DIALECT', { is: 'sqlite', then: Joi.optional().default('localhost'), otherwise: Joi.required() }),
   DB_PORT: Joi.number().default(3306),
-  DB_NAME: Joi.string().required(),
-  DB_USER: Joi.string().required(),
+  DB_NAME: Joi.string().when('DB_DIALECT', { is: 'sqlite', then: Joi.optional().default('cbl_db'), otherwise: Joi.required() }),
+  DB_USER: Joi.string().when('DB_DIALECT', { is: 'sqlite', then: Joi.optional().default('root'), otherwise: Joi.required() }),
   DB_PASSWORD: Joi.string().allow('').default(''),
 
   JWT_ACCESS_SECRET: Joi.string().min(16).required(),
@@ -54,6 +56,8 @@ const config = Object.freeze({
   clientUrl: envVars.CLIENT_URL,
 
   db: {
+    dialect: envVars.DB_DIALECT || 'mysql',
+    storage: envVars.DB_STORAGE,
     host: envVars.DB_HOST,
     port: envVars.DB_PORT,
     name: envVars.DB_NAME,

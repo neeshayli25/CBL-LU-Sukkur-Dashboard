@@ -115,14 +115,69 @@ const ActionTrackerWorkspace = ({
 }: {
   schema: SectionConfig;
 }) => {
-  const { data: cards, loading, fetchAll } = useModuleData(schema.id);
+  const { data: cards, loading, error, fetchAll, createRecord, updateRecord, deleteRecord } = useModuleData(schema.id);
   const [showAddCard, setShowAddCard] = useState(false);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
-  const [formData, setFormData] = useState<any>({});
+  const [formData, setFormData] = useState<any>({ status_id: 'Open' });
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
+
+  const setField = (key: string, value: string) => {
+    setFormData((prev: any) => ({ ...prev, [key]: value }));
+  };
+
+  const handleSaveAction = async () => {
+    setFormError(null);
+    const required = schema.columns.filter((c) => c.required && !c.hideFromForm);
+    for (const col of required) {
+      if (!formData[col.key] && formData[col.key] !== 0) {
+        setFormError(`${col.label} is required`);
+        return;
+      }
+    }
+    setSaving(true);
+    const payload = {
+      ...formData,
+      action: formData.actions_recommendation || formData.action || '',
+      due_date: formData.target_date || formData.due_date || '',
+      assigned_to: formData.responsible_manager || formData.assigned_to || '',
+    };
+    const result = await createRecord(payload);
+    setSaving(false);
+    if (!result.success) {
+      setFormError(result.message || 'Failed to save action');
+      return;
+    }
+    setFormData({ status_id: 'Open' });
+    setShowAddCard(false);
+    await fetchAll();
+  };
+
+  const handleComplete = async (card: any) => {
+    const id = String(card.id);
+    await updateRecord(id, {
+      ...card,
+      status_id: 'Done',
+      completion_date: new Date().toISOString().slice(0, 10),
+    });
+    await fetchAll();
+  };
+
+  const handleCancelAction = async (card: any) => {
+    const id = String(card.id);
+    await updateRecord(id, { ...card, status_id: 'Cancelled' });
+    await fetchAll();
+  };
+
+  const handleDeleteAction = async (card: any) => {
+    if (!window.confirm('Delete this action?')) return;
+    await deleteRecord(String(card.id));
+    await fetchAll();
+  };
 
   return (
     <Layout>
@@ -134,7 +189,7 @@ const ActionTrackerWorkspace = ({
           {
             label: 'New Action',
             icon: <Plus />,
-            onClick: () => setShowAddCard(true),
+            onClick: () => { setFormError(null); setShowAddCard(true); },
             variant: 'primary'
           }
         ]}
@@ -153,15 +208,15 @@ const ActionTrackerWorkspace = ({
           <div className={`${CARD} p-4 space-y-4`}>
             <h3 className="text-[12px] font-bold text-[#374151] uppercase tracking-wide border-b border-[#F0F0F0] pb-2">Department Status</h3>
             <div className="space-y-4">
-              <DepartmentStatusBar name="Operations" openCount={14} maxCount={25} color="#7B1010" />
-              <DepartmentStatusBar name="Maintenance" openCount={8} maxCount={25} color="#D97706" />
-              <DepartmentStatusBar name="Engineering" openCount={3} maxCount={25} color="#16A34A" />
+              <DepartmentStatusBar name="Operations" openCount={cards.filter((c: any) => c.department_id === 'Operations' && c.status_id !== 'Done' && c.status_id !== 'Closed').length} maxCount={25} color="#7B1010" />
+              <DepartmentStatusBar name="Maintenance" openCount={cards.filter((c: any) => c.department_id === 'Maintenance' && c.status_id !== 'Done' && c.status_id !== 'Closed').length} maxCount={25} color="#D97706" />
+              <DepartmentStatusBar name="Engineering" openCount={cards.filter((c: any) => c.department_id === 'Engineering' && c.status_id !== 'Done' && c.status_id !== 'Closed').length} maxCount={25} color="#16A34A" />
             </div>
           </div>
           
-          <MyPendingWidget actions={cards.filter((card: any) => card.status_id !== 'Closed').map((card: any) => ({
+          <MyPendingWidget actions={cards.filter((card: any) => card.status_id !== 'Closed' && card.status_id !== 'Done' && card.status_id !== 'Cancelled').map((card: any) => ({
             id: String(card.id ?? card.corrective_action_id),
-            title: card.action || card.action_description || 'Corrective action',
+            title: card.action || card.actions_recommendation || card.action_description || 'Corrective action',
             dueDate: card.due_date || card.target_date || '',
             isOverdue: Boolean(card.due_date && card.due_date < new Date().toISOString().slice(0, 10)),
             sourceId: card.linked_id || String(card.id ?? card.corrective_action_id),
@@ -170,6 +225,9 @@ const ActionTrackerWorkspace = ({
 
         {/* Main Content */}
         <div className="flex-1 space-y-5">
+          {error && (
+            <p className="text-[13px] text-[#991B1B] bg-[#FEF2F2] border border-[#FECACA] rounded-md px-3 py-2">{error}</p>
+          )}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {loading ? (
             <p className="text-[13px] text-[#9CA3AF]">Loading records...</p>
@@ -186,7 +244,7 @@ const ActionTrackerWorkspace = ({
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <LinkedSourceBadge id={card.linked_id || `CAPA-${card.id}`} />
-                  <h3 className="text-[15px] font-semibold text-[#1A1818] mt-2">{card.action}</h3>
+                  <h3 className="text-[15px] font-semibold text-[#1A1818] mt-2">{card.action || card.actions_recommendation}</h3>
                 </div>
                 <StatusBadge status={card.status_id} />
               </div>
@@ -195,13 +253,13 @@ const ActionTrackerWorkspace = ({
                 <div>
                   <p className="text-[11px] uppercase tracking-wide text-[#9CA3AF] font-semibold mb-1.5">Responsible Person</p>
                   <div className="flex items-center gap-2">
-                    <AvatarInitials name={card.assigned_to || 'Unassigned'} size="xs" />
-                    <p className="text-[13px] text-[#1A1818] font-medium">{card.assigned_to}</p>
+                    <AvatarInitials name={card.assigned_to || card.responsible_manager || 'Unassigned'} size="xs" />
+                    <p className="text-[13px] text-[#1A1818] font-medium">{card.assigned_to || card.responsible_manager}</p>
                   </div>
                 </div>
                 <div>
                   <p className="text-[11px] uppercase tracking-wide text-[#9CA3AF] font-semibold">Due Date</p>
-                  <p className="text-[13px] text-[#1A1818] mt-1">{card.due_date}</p>
+                  <p className="text-[13px] text-[#1A1818] mt-1">{card.due_date || card.target_date}</p>
                 </div>
                 <div>
                   <p className="text-[11px] uppercase tracking-wide text-[#9CA3AF] font-semibold">Completion Date</p>
@@ -209,18 +267,30 @@ const ActionTrackerWorkspace = ({
                 </div>
                 <div>
                   <p className="text-[11px] uppercase tracking-wide text-[#9CA3AF] font-semibold">Remarks</p>
-                  <p className="text-[13px] text-[#1A1818] mt-1">{card.remarks}</p>
+                  <p className="text-[13px] text-[#1A1818] mt-1">{card.remarks || card.audit_description || '—'}</p>
                 </div>
               </div>
 
               <div className="flex flex-wrap gap-2 mt-5">
-                <button className="h-8 px-3 text-[12px] font-medium rounded-md bg-[#ECFDF5] text-[#065F46] border border-[#A7F3D0] hover:bg-[#D1FAE5] transition-colors">
+                <button
+                  type="button"
+                  className="h-8 px-3 text-[12px] font-medium rounded-md bg-[#ECFDF5] text-[#065F46] border border-[#A7F3D0] hover:bg-[#D1FAE5] transition-colors"
+                  onClick={(e) => { e.stopPropagation(); handleComplete(card); }}
+                >
                   Complete
                 </button>
-                <button className="h-8 px-3 text-[12px] font-medium rounded-md bg-[#FEF2F2] text-[#991B1B] border border-[#FECACA] hover:bg-[#FEE2E2] transition-colors">
+                <button
+                  type="button"
+                  className="h-8 px-3 text-[12px] font-medium rounded-md bg-[#FEF2F2] text-[#991B1B] border border-[#FECACA] hover:bg-[#FEE2E2] transition-colors"
+                  onClick={(e) => { e.stopPropagation(); handleCancelAction(card); }}
+                >
                   Cancel
                 </button>
-                <button className="h-8 px-3 text-[12px] font-medium rounded-md bg-white text-[#6B7280] border border-[#DEDEDE] hover:bg-[#F5F5F5] transition-colors">
+                <button
+                  type="button"
+                  className="h-8 px-3 text-[12px] font-medium rounded-md bg-white text-[#6B7280] border border-[#DEDEDE] hover:bg-[#F5F5F5] transition-colors"
+                  onClick={(e) => { e.stopPropagation(); handleDeleteAction(card); }}
+                >
                   Delete
                 </button>
               </div>
@@ -253,16 +323,49 @@ const ActionTrackerWorkspace = ({
               <label className="block text-[12px] font-semibold text-[#374151] mb-1.5 uppercase tracking-wide">
                 {col.label}
               </label>
-              <input className={FIELD_BASE} value={formData[col.key] ?? ''} onChange={e => setFormData((prev: any) => ({ ...prev, [col.key]: e.target.value }))} />
+              {col.type === 'select' && col.options ? (
+                <select
+                  className={FIELD_BASE}
+                  value={formData[col.key] ?? ''}
+                  onChange={(e) => setField(col.key, e.target.value)}
+                >
+                  <option value="">Select...</option>
+                  {col.options.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              ) : col.type === 'textarea' ? (
+                <textarea
+                  className={FIELD_BASE}
+                  rows={3}
+                  value={formData[col.key] ?? ''}
+                  onChange={(e) => setField(col.key, e.target.value)}
+                />
+              ) : (
+                <input
+                  className={FIELD_BASE}
+                  type={col.type === 'date' ? 'date' : col.type === 'number' ? 'number' : 'text'}
+                  value={formData[col.key] ?? ''}
+                  onChange={(e) => setField(col.key, e.target.value)}
+                />
+              )}
             </div>
           ))}
         </div>
+        {formError && (
+          <p className="mt-4 text-[13px] text-[#991B1B]">{formError}</p>
+        )}
         <div className="flex justify-end gap-2 mt-6">
-          <button className="h-9 px-4 text-[13px] font-medium rounded-md border border-[#DEDEDE] text-[#374151] hover:bg-[#F5F5F5]" onClick={() => setShowAddCard(false)}>
+          <button type="button" className="h-9 px-4 text-[13px] font-medium rounded-md border border-[#DEDEDE] text-[#374151] hover:bg-[#F5F5F5]" onClick={() => setShowAddCard(false)}>
             Cancel
           </button>
-          <button className="h-9 px-4 text-[13px] font-medium rounded-md bg-[#CB0017] text-white hover:bg-[#A8001A]">
-            Save Action
+          <button
+            type="button"
+            disabled={saving}
+            className="h-9 px-4 text-[13px] font-medium rounded-md bg-[#CB0017] text-white hover:bg-[#A8001A] disabled:opacity-60"
+            onClick={handleSaveAction}
+          >
+            {saving ? 'Saving...' : 'Save Action'}
           </button>
         </div>
       </CenterModal>
@@ -377,6 +480,8 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
     if (result.success) {
       setFormData({});
       setIsAddModalOpen(false);
+    } else {
+      setValidationError(result.message || 'Failed to save record. Check you are signed in (avatar should be SA).');
     }
   };
 
@@ -405,7 +510,12 @@ export const DataEntrySection: React.FC<DataEntrySectionProps> = ({ schema }) =>
       ];
     }
     const result = await updateRecord(editingId, updatedData);
-    if (result.success) setEditingId(null);
+    if (result.success) {
+      setEditingId(null);
+      setValidationError(null);
+    } else {
+      setValidationError(result.message || 'Failed to update record');
+    }
   };
 
   const filteredEntries = useMemo(() => entries.filter(entry => {
