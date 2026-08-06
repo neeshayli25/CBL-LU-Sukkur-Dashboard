@@ -2,12 +2,18 @@
 
 const config = require('./index');
 
+/** Allow any localhost port in development (Vite may use 5174 if 5173 is busy). */
+function isLocalDevOrigin(origin) {
+  if (config.env !== 'development') return false;
+  return /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
+}
+
 module.exports = {
   origin: (origin, callback) => {
     // Allow requests with no origin (e.g., mobile apps, curl)
     if (!origin) return callback(null, true);
 
-    if (config.allowedOrigins.includes(origin)) {
+    if (config.allowedOrigins.includes(origin) || isLocalDevOrigin(origin)) {
       return callback(null, true);
     }
 
