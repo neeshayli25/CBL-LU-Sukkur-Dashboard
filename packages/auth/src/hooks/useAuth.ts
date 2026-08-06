@@ -117,15 +117,18 @@ export const useAuth = () => {
     } catch (e: any) {
       console.error("Login Error:", e);
       clearAuth();
-      const msg =
-        e?.response?.data?.message ||
-        e?.message ||
-        "Failed to login";
-      const hint =
-        /Network Error|ECONNREFUSED|proxy/i.test(String(msg)) || e?.code === "ERR_NETWORK"
-          ? " — start backend with: cd backend && npm run dev (and use embedded DB setup)"
-          : "";
-      setError(`${msg}${hint}`);
+      const raw = e?.response?.data?.message || e?.message || "Failed to login";
+      let msg = String(raw);
+      if (/uninitialized_public_client_application|not been initialized/i.test(msg)) {
+        msg = "Microsoft sign-in is still starting — wait 2 seconds and try again (or reload the page).";
+      } else if (/popup_window_error|user_cancelled|popup_closed/i.test(msg)) {
+        msg = "Microsoft popup was blocked or closed. Allow popups for localhost:5173 and try again.";
+      } else if (/AADSTS50011|redirect_uri/i.test(msg)) {
+        msg = "Redirect URI mismatch. In Azure, add SPA redirect http://localhost:5173 and open that exact URL.";
+      } else if (/Network Error|ECONNREFUSED|proxy/i.test(msg) || e?.code === "ERR_NETWORK") {
+        msg = `${msg} — start backend with: cd backend && npm run dev`;
+      }
+      setError(msg);
     } finally {
       setIsLoggingIn(false);
     }
