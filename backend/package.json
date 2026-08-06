@@ -12,6 +12,7 @@
     "seed:umzug": "node scripts/seed.js",
     "setup:embedded": "node scripts/setup-embedded.js",
     "db:embedded": "node scripts/bootstrap-embedded-db.js",
+    "user:sso": "node scripts/add-sso-user.js",
     "migrate:undo": "npx sequelize-cli db:migrate:undo",
     "db:fresh": "npx sequelize-cli db:migrate:undo:all && npx sequelize-cli db:migrate && npx sequelize-cli db:seed:all",
     "test": "cross-env NODE_ENV=test jest --runInBand --forceExit",

@@ -72,11 +72,13 @@ fs.writeFileSync(path.join(backendDir, '.env'), backendEnv, 'utf8');
 console.log('Wrote backend/.env (embedded SQLite)');
 
 const feEnv = `VITE_API_URL=/api/v1
+# true = Local Preview (password → real JWT) — use this until SSO user is seeded
 VITE_BYPASS_AUTH=true
 VITE_PREVIEW_EMAIL=superadmin@cblapp.com
 VITE_PREVIEW_PASSWORD=Admin@123!
-VITE_MSAL_CLIENT_ID=your_entra_app_client_id
-VITE_MSAL_TENANT_ID=your_entra_tenant_id
+# Your Entra app (SPA). Set VITE_BYPASS_AUTH=false only after add-sso-user.js
+VITE_MSAL_CLIENT_ID=6ac94d07-9ab4-470f-924d-6361d471fb0e
+VITE_MSAL_TENANT_ID=90dccc47-53bf-449c-876c-c5649f21f94d
 `;
 fs.writeFileSync(path.join(rootDir, 'apps', 'management-dashboard', '.env'), feEnv, 'utf8');
 console.log('Wrote apps/management-dashboard/.env');
